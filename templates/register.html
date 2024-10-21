@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Login</title>
+    <title>Register</title>
 </head>
 <body>
-    <h2>Login</h2>
+    <h2>Register</h2>
     <form method="POST">
         <label for="username">Username:</label><br>
         <input type="text" id="username" name="username" required><br><br>
@@ -13,8 +13,8 @@
         <label for="password">Password:</label><br>
         <input type="password" id="password" name="password" required><br><br>
 
-        <button type="submit">Login</button>
+        <button type="submit">Register</button>
     </form>
-    <a href="{{ url_for('register') }}">Don't have an account? Register here</a>
+    <a href="{{ url_for('login') }}">Already have an account? Login here</a>
 </body>
 </html>
