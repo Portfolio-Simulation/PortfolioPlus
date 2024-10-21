@@ -2,19 +2,69 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Register</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio+ | Register</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
 </head>
 <body>
-    <h2>Register</h2>
-    <form method="POST">
-        <label for="username">Username:</label><br>
-        <input type="text" id="username" name="username" required><br><br>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <a class="navbar-brand" href="/">Portfolio+</a>
+    </nav>
 
-        <label for="password">Password:</label><br>
-        <input type="password" id="password" name="password" required><br><br>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-success text-white text-center">
+                        <h4>Register</h4>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST">
+                            <div class="form-group">
+                                <label for="name">Full Name</label>
+                                <input type="text" class="form-control" id="name" name="name" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="email">Email</label>
+                                <input type="email" class="form-control" id="email" name="email" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="phone">Phone Number</label>
+                                <input type="text" class="form-control" id="phone" name="phone">
+                            </div>
+                            <div class="form-group">
+                                <label for="address">Address</label>
+                                <textarea class="form-control" id="address" name="address"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="username">Username</label>
+                                <input type="text" class="form-control" id="username" name="username" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="password">Password</label>
+                                <input type="password" class="form-control" id="password" name="password" required>
+                            </div>
+                            <button type="submit" class="btn btn-success btn-block">Register</button>
+                        </form>
+                        <div class="text-center mt-3">
+                            <a href="/">Already have an account? Login here</a>
+                        </div>
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            <ul class="mt-3">
+                                {% for category, message in messages %}
+                                    <li class="text-{{ category }}">{{ message }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                        {% endwith %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-        <button type="submit">Register</button>
-    </form>
-    <a href="{{ url_for('login') }}">Already have an account? Login here</a>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

@@ -1,15 +1,15 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, session
 import mysql.connector
 import os
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
+# Load environment variables from .env
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'  # For session management
+app.secret_key = 'your_secret_key'  # Replace with a secure random key
 
-# MySQL connection configuration
+# MySQL connection setup
 db = mysql.connector.connect(
     host=os.getenv('MYSQL_HOST'),
     user=os.getenv('MYSQL_USER'),
@@ -18,55 +18,72 @@ db = mysql.connector.connect(
 )
 cursor = db.cursor()
 
-# Route for user registration
+@app.route('/')
+def home():
+    if 'user' in session:
+        return redirect(url_for('dashboard'))
+    return render_template('index.html')
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
+        name = request.form.get('name')
+        email = request.form.get('email')
+        phone = request.form.get('phone')
+        address = request.form.get('address')
+        username = request.form.get('username')
+        password = request.form.get('password')
 
-        # Check if username already exists
+        # Check if username is already taken
         cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
-        user = cursor.fetchone()
+        existing_user = cursor.fetchone()
 
-        if user:
+        if existing_user:
             flash('Username already taken. Please choose another.', 'danger')
         else:
+            # Insert new user into the database
             cursor.execute(
-                "INSERT INTO users (username, password) VALUES (%s, %s)",
-                (username, password)
+                "INSERT INTO users (name, email, phone, address, username, password) "
+                "VALUES (%s, %s, %s, %s, %s, %s)",
+                (name, email, phone, address, username, password)
             )
             db.commit()
-            flash('User registered successfully!', 'success')
-            return redirect(url_for('login'))
+            flash('Registration successful! You can now log in.', 'success')
+            return redirect(url_for('home'))
 
     return render_template('register.html')
 
-# Route for user login
-@app.route('/login', methods=['GET', 'POST'])
+@app.route('/login', methods=['POST'])
 def login():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
+    username = request.form.get('username')
+    password = request.form.get('password')
 
-        cursor.execute(
-            "SELECT * FROM users WHERE username = %s AND password = %s",
-            (username, password)
-        )
-        user = cursor.fetchone()
+    # Verify user credentials
+    cursor.execute("SELECT * FROM users WHERE username = %s AND password = %s", (username, password))
+    user = cursor.fetchone()
 
-        if user:
-            flash(f'Welcome, {username}!', 'success')
-            return redirect(url_for('dashboard'))
-        else:
-            flash('Invalid username or password.', 'danger')
+    if user:
+        session['user'] = username  # Store user in session
+        flash('Login successful!', 'success')
+        return redirect(url_for('dashboard'))
+    else:
+        flash('Invalid username or password.', 'danger')
+        return redirect(url_for('home'))
 
-    return render_template('login.html')
-
-# Route for dashboard
 @app.route('/dashboard')
 def dashboard():
-    return '<h1>Welcome to your dashboard!</h1>'
+    if 'user' not in session:
+        flash('Please log in to access the dashboard.', 'danger')
+        return redirect(url_for('home'))
+
+    username = session.get('user')
+    return render_template('dashboard.html', username=username)
+
+@app.route('/logout')
+def logout():
+    session.pop('user', None)
+    flash('You have been logged out.', 'info')
+    return redirect(url_for('home'))
 
 if __name__ == '__main__':
     app.run(debug=True)
