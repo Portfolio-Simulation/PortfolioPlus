@@ -24,6 +24,23 @@ def home():
         return redirect(url_for('dashboard'))
     return render_template('index.html')
 
+@app.route('/login', methods=['POST'])
+def login():
+    username = request.form.get('username')
+    password = request.form.get('password')
+
+    cursor.execute("SELECT * FROM users WHERE username = %s AND password = %s", (username, password))
+    user = cursor.fetchone()
+
+    if user:
+        session['user'] = username  # Store user in session
+        flash(f'Welcome, {username}!', 'success')
+        return redirect(url_for('dashboard'))
+    else:
+        flash('Invalid username or password.', 'danger')
+        return redirect(url_for('home'))
+
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -34,14 +51,12 @@ def register():
         username = request.form.get('username')
         password = request.form.get('password')
 
-        # Check if username is already taken
         cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
         existing_user = cursor.fetchone()
 
         if existing_user:
             flash('Username already taken. Please choose another.', 'danger')
         else:
-            # Insert new user into the database
             cursor.execute(
                 "INSERT INTO users (name, email, phone, address, username, password) "
                 "VALUES (%s, %s, %s, %s, %s, %s)",
@@ -52,23 +67,6 @@ def register():
             return redirect(url_for('home'))
 
     return render_template('register.html')
-
-@app.route('/login', methods=['POST'])
-def login():
-    username = request.form.get('username')
-    password = request.form.get('password')
-
-    # Verify user credentials
-    cursor.execute("SELECT * FROM users WHERE username = %s AND password = %s", (username, password))
-    user = cursor.fetchone()
-
-    if user:
-        session['user'] = username  # Store user in session
-        flash('Login successful!', 'success')
-        return redirect(url_for('dashboard'))
-    else:
-        flash('Invalid username or password.', 'danger')
-        return redirect(url_for('home'))
 
 @app.route('/dashboard')
 def dashboard():
