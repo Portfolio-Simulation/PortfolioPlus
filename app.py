@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 import mysql.connector
 import os
 from dotenv import load_dotenv
@@ -40,7 +40,6 @@ def login():
         flash('Invalid username or password.', 'danger')
         return redirect(url_for('home'))
 
-
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -67,6 +66,18 @@ def register():
             return redirect(url_for('home'))
 
     return render_template('register.html')
+
+@app.route('/check_username', methods=['POST'])
+def check_username():
+    """AJAX route to check if the username is available."""
+    username = request.form.get('username')
+    cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
+    user = cursor.fetchone()
+
+    if user:
+        return jsonify({'available': False})
+    else:
+        return jsonify({'available': True})
 
 @app.route('/dashboard')
 def dashboard():
