@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 import mysql.connector
 import os
 from dotenv import load_dotenv
+import yfinance as yf
 
 # Load environment variables from .env
 load_dotenv()
@@ -93,6 +94,35 @@ def logout():
     session.pop('user', None)
     flash('You have been logged out.', 'info')
     return redirect(url_for('home'))
+
+@app.route('/stocks')
+def stocks():
+    # List of stock symbols to display
+    stock_symbols = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA']
+    
+    # Fetch stock data
+    stocks_data = []
+    for symbol in stock_symbols:
+        ticker = yf.Ticker(symbol)
+        stock_info = ticker.info
+        
+        if stock_info:  # Check if stock_info is not None
+            stocks_data.append({
+                'symbol': symbol,
+                'name': stock_info.get('shortName', 'N/A'),
+                'price': stock_info.get('regularMarketPrice', 'N/A'),
+                'currency': stock_info.get('currency', 'N/A')
+            })
+        else:
+            # Handle the case where stock_info is None
+            stocks_data.append({
+                'symbol': symbol,
+                'name': 'Data Unavailable',
+                'price': 'N/A',
+                'currency': 'N/A'
+            })
+    
+    return render_template('stocks.html', stocks=stocks_data)
 
 if __name__ == '__main__':
     app.run(debug=True)
