@@ -99,29 +99,30 @@ def logout():
 def stocks():
     # List of stock symbols to display
     stock_symbols = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA']
-    
-    # Fetch stock data
-    stocks_data = []
+
+    # Fetch stock data using yfinance and update the stocks table
     for symbol in stock_symbols:
         ticker = yf.Ticker(symbol)
-        stock_info = ticker.info
-        
-        if stock_info:  # Check if stock_info is not None
-            stocks_data.append({
-                'symbol': symbol,
-                'name': stock_info.get('shortName', 'N/A'),
-                'price': stock_info.get('regularMarketPrice', 'N/A'),
-                'currency': stock_info.get('currency', 'N/A')
-            })
-        else:
-            # Handle the case where stock_info is None
-            stocks_data.append({
-                'symbol': symbol,
-                'name': 'Data Unavailable',
-                'price': 'N/A',
-                'currency': 'N/A'
-            })
-    
+        stock_info = ticker.history(period="1d")
+
+        if not stock_info.empty:
+            # Extract the necessary details
+            latest_data = stock_info.iloc[-1]
+            open_price = latest_data['Open']
+            close_price = latest_data['Close']
+
+            # Insert or update the stock data in the database
+            cursor.execute("""
+                INSERT INTO stocks (stock_symbol, date, open_price, close_price)
+                VALUES (%s, CURDATE(), %s, %s)
+                ON DUPLICATE KEY UPDATE open_price = %s, close_price = %s
+            """, (symbol, open_price, close_price, open_price, close_price))
+            db.commit()
+
+    # Retrieve stock data from the database to display on the website
+    cursor.execute("SELECT stock_symbol, date, open_price, close_price FROM stocks")
+    stocks_data = cursor.fetchall()
+
     return render_template('stocks.html', stocks=stocks_data)
 
 if __name__ == '__main__':
