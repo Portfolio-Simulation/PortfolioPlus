@@ -4,11 +4,18 @@
     <meta charset="UTF-8">
     <title>Stocks | Portfolio+</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        .profit { color: green; }
+        .loss { color: red; }
+    </style>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <a class="navbar-brand" href="#">Portfolio+</a>
-        <div class="collapse navbar-collapse">
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ml-auto">
                 <li class="nav-item">
                     <a class="nav-link" href="/dashboard">Home</a>
@@ -32,18 +39,29 @@
             <thead>
                 <tr>
                     <th>Symbol</th>
-                    <th>Name</th>
-                    <th>Price</th>
-                    <th>Currency</th>
+                    <th>Current Price</th>
+                    <th>Yesterday's Price</th>
+                    <th>P&L</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
                 {% for stock in stocks %}
                 <tr>
                     <td>{{ stock.symbol }}</td>
-                    <td>{{ stock.name }}</td>
-                    <td>{{ stock.price }}</td>
-                    <td>{{ stock.currency }}</td>
+                    <td>{{ stock.day_minus_1 }}</td> <!-- Current Price -->
+                    <td>{{ stock.day_minus_2 }}</td> <!-- Yesterday's Price -->
+                    <td>
+                        {% if stock.gain_loss >= 0 %}
+                            <span class="profit">+{{ stock.gain_loss }}</span>
+                        {% else %}
+                            <span class="loss">{{ stock.gain_loss }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <button class="btn btn-success btn-sm">Buy</button>
+                        <button class="btn btn-danger btn-sm">Sell</button>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>

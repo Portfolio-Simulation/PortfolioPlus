@@ -99,29 +99,25 @@ def logout():
 def stocks():
     # List of stock symbols to display
     stock_symbols = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA']
+    stocks_data = []
 
-    # Fetch stock data using yfinance and update the stocks table
+    # Fetch stock data for the past two days using yfinance
     for symbol in stock_symbols:
         ticker = yf.Ticker(symbol)
-        stock_info = ticker.history(period="1d")
+        stock_info = ticker.history(period="3d")  # Fetch the last 3 days to be safe
+        
+        if len(stock_info) >= 3:
+            day_minus_2 = stock_info['Close'][-3]
+            day_minus_1 = stock_info['Close'][-2]
+            gain_loss = day_minus_1 - day_minus_2  # Calculate Gain/Loss
 
-        if not stock_info.empty:
-            # Extract the necessary details
-            latest_data = stock_info.iloc[-1]
-            open_price = latest_data['Open']
-            close_price = latest_data['Close']
-
-            # Insert or update the stock data in the database
-            cursor.execute("""
-                INSERT INTO stocks (stock_symbol, date, open_price, close_price)
-                VALUES (%s, CURDATE(), %s, %s)
-                ON DUPLICATE KEY UPDATE open_price = %s, close_price = %s
-            """, (symbol, open_price, close_price, open_price, close_price))
-            db.commit()
-
-    # Retrieve stock data from the database to display on the website
-    cursor.execute("SELECT stock_symbol, date, open_price, close_price FROM stocks")
-    stocks_data = cursor.fetchall()
+            # Append data to stocks_data list
+            stocks_data.append({
+                'symbol': symbol,
+                'day_minus_2': round(day_minus_2, 2),
+                'day_minus_1': round(day_minus_1, 2),
+                'gain_loss': round(gain_loss, 2)
+            })
 
     return render_template('stocks.html', stocks=stocks_data)
 
