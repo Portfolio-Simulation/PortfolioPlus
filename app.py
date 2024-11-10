@@ -104,7 +104,7 @@ def stocks():
     # Fetch stock data for the past two days using yfinance
     for symbol in stock_symbols:
         ticker = yf.Ticker(symbol)
-        stock_info = ticker.history(period="3d")  # Fetch the last 3 days to be safe
+        stock_info = ticker.history(period="5d")  # Fetch the last 5 days to be safe
         
         if len(stock_info) >= 3:
             day_minus_2 = stock_info['Close'][-3]
