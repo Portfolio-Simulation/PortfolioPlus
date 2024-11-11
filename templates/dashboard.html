@@ -154,8 +154,8 @@
                             <div class="card h-100">
                                 <div class="card-body text-center">
                                     <h6 class="text-muted mb-3">{{ index }}</h6>
-                                    <div class="market-value" id="{{ index.lower().replace(' ', '') }}Price">--</div>
-                                    <div class="market-change" id="{{ index.lower().replace(' ', '') }}Change">--</div>
+                                    <div class="market-value" id="{{ index.lower().replace(' ', '').replace('&', '') }}Price">--</div>
+                                    <div class="market-change" id="{{ index.lower().replace(' ', '').replace('&', '') }}Change">--</div>
                                 </div>
                             </div>
                         </div>
@@ -171,22 +171,19 @@
     <script>
         // Function to fetch and display market data
         function updateMarketData() {
-            // Add AJAX call to fetch market data
-            // This would be a new endpoint in your Flask app
             $.get('/get_market_indices', function(data) {
-                // Update the market summary cards
+                if (data.error) {
+                    console.error('Error fetching market data:', data.error);
+                    return;
+                }
+
+                // Update market summary cards
                 updateMarketSummary(data);
-                // Update the chart
+
+                // Update the chart with the received data
                 updateMarketChart(data);
             });
         }
-
-        // Initialize the dashboard
-        $(document).ready(function() {
-            updateMarketData();
-            // Refresh data every 5 minutes
-            setInterval(updateMarketData, 300000);
-        });
 
         function updateChart(timeframe = '1M') {
             $('.time-selector').removeClass('active');
@@ -264,18 +261,34 @@
         }
 
         function updateMarketSummary(data) {
-            // Update S&P 500
-            $('#sp500Price').text('$' + data.SPY.current_price);
-            updateChangeDisplay('sp500Change', data.SPY.change, data.SPY.change_percent);
+            if (data.SPY) {
+                $('#sp500Price').text('$' + data.SPY.current_price);
+                updateChangeDisplay('sp500Change', data.SPY.change, data.SPY.change_percent);
+            }
+            if (data.DIA) {
+                $('#dowjonesPrice').text('$' + data.DIA.current_price);
+                updateChangeDisplay('dowjonesChange', data.DIA.change, data.DIA.change_percent);
+            }
+            if (data.QQQ) {
+                $('#nasdaqPrice').text('$' + data.QQQ.current_price);
+                updateChangeDisplay('nasdaqChange', data.QQQ.change, data.QQQ.change_percent);
+            }
+            if (data.IWM) {
+                $('#russell2000Price').text('$' + data.IWM.current_price);
+                updateChangeDisplay('russell2000Change', data.IWM.change, data.IWM.change_percent);
+            }
+            if (data.VGK) {
+                $('#ftseeuropePrice').text('$' + data.VGK.current_price);
+                updateChangeDisplay('ftseeuropeChange', data.VGK.change, data.VGK.change_percent);
+            }
+            if (data.EEM) {
+                $('#emergingmarketsPrice').text('$' + data.EEM.current_price);
+                updateChangeDisplay('emergingmarketsChange', data.EEM.change, data.EEM.change_percent);
+            }
 
-            // Update Dow Jones
-            $('#dowPrice').text('$' + data.DIA.current_price);
-            updateChangeDisplay('dowChange', data.DIA.change, data.DIA.change_percent);
-
-            // Update NASDAQ
-            $('#nasdaqPrice').text('$' + data.QQQ.current_price);
-            updateChangeDisplay('nasdaqChange', data.QQQ.change, data.QQQ.change_percent);
+    // Repeat for other indices
         }
+
 
         function updateChangeDisplay(elementId, change, changePercent) {
             const element = $(`#${elementId}`);
@@ -288,10 +301,10 @@
 
         // Initialize when document is ready
         $(document).ready(function() {
-            updateChart('1M');
-            // Refresh data every 5 minutes
-            setInterval(() => updateChart('1M'), 300000);
-        });
+        updateMarketData();
+        // Refresh data every 5 minutes
+        setInterval(updateMarketData, 300000);
+    });
     </script>
 </body>
 </html>

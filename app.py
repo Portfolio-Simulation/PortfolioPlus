@@ -190,9 +190,9 @@ def get_market_indices():
             'SPY': {'name': 'S&P 500', 'color': '#2E86DE'},
             'DIA': {'name': 'Dow Jones', 'color': '#10AC84'},
             'QQQ': {'name': 'NASDAQ', 'color': '#5758BB'},
-            'IWM': {'name': 'Russell 2000', 'color': '#FF6B6B'},  # Small-cap index
-            'VGK': {'name': 'FTSE Europe', 'color': '#A8E6CF'},  # European markets
-            'EEM': {'name': 'Emerging Markets', 'color': '#FFD93D'}  # Emerging markets
+            'IWM': {'name': 'Russell 2000', 'color': '#FF6B6B'}, 
+            'VGK': {'name': 'FTSE Europe', 'color': '#A8E6CF'},  
+            'EEM': {'name': 'Emerging Markets', 'color': '#FFD93D'}
         }
         
         data = {}
@@ -210,7 +210,7 @@ def get_market_indices():
                     'change': round(hist['Close'][-1] - hist['Close'][-2], 2),
                     'change_percent': round(((hist['Close'][-1] - hist['Close'][-2]) / hist['Close'][-2]) * 100, 2)
                 }
-            
+        print(jsonify(data))    
         return jsonify(data)
     except Exception as e:
         print(f"Error fetching market data: {str(e)}")
