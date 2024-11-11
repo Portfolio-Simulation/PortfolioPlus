@@ -10,6 +10,80 @@
         .loss { color: red; }
         .table th { 
             background-color: #f8f9fa;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        /* New styles for better scrolling */
+        .table-responsive {
+            max-height: 70vh;  /* Viewport-based height */
+            overflow-y: auto;
+            border-radius: 8px;
+            position: relative;
+            scrollbar-width: thin;  /* For Firefox */
+        }
+
+        /* Custom scrollbar styling */
+        .table-responsive::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .table-responsive::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .table-responsive::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+        .table-responsive::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        /* Fade effect at bottom */
+        .card-body::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 30px;
+            background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.9));
+            pointer-events: none;
+        }
+
+        /* Enhanced table styling */
+        .table {
+            margin-bottom: 0;
+        }
+
+        .table td {
+            vertical-align: middle;
+        }
+
+        .stock-symbol {
+            color: #2E86DE;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .stock-symbol:hover {
+            text-decoration: none;
+            color: #1C6BC3;
+        }
+
+        /* Card enhancements */
+        .card {
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border: none;
+        }
+
+        .card-header {
+            background-color: #f8f9fa;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
         }
     </style>
 </head>
@@ -87,6 +161,23 @@
                             {% endfor %}
                         </tbody>
                     </table>
+                </div>
+                <div class="scroll-indicator" style="
+                    position: absolute;
+                    right: 15px;
+                    bottom: 15px;
+                    background: rgba(255,255,255,0.9);
+                    padding: 8px 12px;
+                    border-radius: 20px;
+                    font-size: 0.9em;
+                    color: #666;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                    display: flex;
+                    align-items: center;
+                    gap: 5px;
+                    z-index: 2;
+                ">
+                    <i class="fas fa-mouse"></i> Scroll for more stocks
                 </div>
             </div>
         </div>
