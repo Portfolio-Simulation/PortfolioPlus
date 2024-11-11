@@ -215,7 +215,39 @@ def get_market_indices():
     except Exception as e:
         print(f"Error fetching market data: {str(e)}")
         return jsonify({'error': 'Failed to fetch market data'}), 500
-    
+
+@app.route('/portfolio')
+def portfolio():
+    if 'user_id' not in session:
+        flash('Please log in to view your portfolio.', 'danger')
+        return redirect(url_for('home'))
+
+    user_id = session['user_id']
+
+    # Fetch the stocks in the user's portfolio
+    cursor.execute("""
+        SELECT stock_symbol, company_name, quantity, sector 
+        FROM portfolios 
+        WHERE user_id = %s
+    """, (user_id,))
+    stocks = cursor.fetchall()
+
+    # Format the data into a list of dictionaries
+    stock_list = [
+        {
+            'symbol': stock[0],
+            'company_name': stock[1],
+            'quantity': stock[2],
+            'sector': stock[3]
+        }
+        for stock in stocks
+    ]
+
+    # Pass the stock data to the template
+    return render_template('portfolio.html', stocks=stock_list)
+
+
+
 @app.route('/watchlist')
 def watchlist():
     if 'user_id' not in session:

@@ -46,12 +46,17 @@ CREATE TABLE Portfolios (
     portfolio_id INT PRIMARY KEY AUTO_INCREMENT,
     user_id INT,
     stock_symbol VARCHAR(10),
+    company_name VARCHAR(50),
     quantity INT,
     sector VARCHAR(50),
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
-
+Drop table transactions;
 Select * From Portfolios;
+
+#INSERT INTO portfolios (user_id, stock_symbol, company_name, quantity, sector) 
+#VALUES (1, 'AAPL', 'Apple', 12, 'Tech');
+
 
 -- Creating the Transactions Table
 CREATE TABLE Transactions (
@@ -61,7 +66,7 @@ CREATE TABLE Transactions (
     transaction_type ENUM('buy', 'sell'),
     quantity INT,
     price DECIMAL(10, 2),
-    transaction_date DATETIME,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 Select * From Transactions;
