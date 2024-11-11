@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Watchlist | Portfolio+</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        .profit { color: green; }
+        .loss { color: red; }
+        .table th { 
+            background-color: #f8f9fa;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        .table-responsive {
+            max-height: 70vh;
+            overflow-y: auto;
+            border-radius: 8px;
+            position: relative;
+            scrollbar-width: thin;
+        }
+        .table-responsive::-webkit-scrollbar {
+            width: 8px;
+        }
+        .table-responsive::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        .table-responsive::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        .table-responsive::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        .card-body::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 30px;
+            background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.9));
+            pointer-events: none;
+        }
+        .table {
+            margin-bottom: 0;
+        }
+        .table td {
+            vertical-align: middle;
+        }
+        .stock-symbol {
+            color: #2E86DE;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .stock-symbol:hover {
+            text-decoration: none;
+            color: #1C6BC3;
+        }
+        .card {
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border: none;
+        }
+        .card-header {
+            background-color: #f8f9fa;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <a class="navbar-brand" href="/dashboard">Portfolio+</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav mr-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="/dashboard">
+                        <i class="fas fa-home"></i> Home
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/stocks">
+                        <i class="fas fa-chart-line"></i> Stocks
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/portfolio">
+                        <i class="fas fa-briefcase"></i> My Portfolio
+                    </a>
+                </li>
+                <li class="nav-item active">
+                    <a class="nav-link" href="/watchlist">
+                        <i class="fas fa-glasses"></i> Watchlist
+                    </a>
+                </li>
+            </ul>
+            <span class="navbar-text mr-4">
+                <i class="fas fa-wallet"></i> Balance: $10,000.00
+            </span>
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a class="nav-link" href="/logout">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">My Watchlist</h5>
+            </div>
+            <div class="card-body">
+                {% if message %}
+                    <p class="text-center text-muted">{{ message }}</p>
+                {% else %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Symbol</th>
+                                    <th>Company Name</th>
+                                    <th>Previous Price</th>
+                                    <th>Current Price</th>
+                                    <th>Gain/Loss</th>
+                                    <th>Volume</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for stock in stocks %}
+                                <tr>
+                                    <td>
+                                        <a href="#" class="stock-symbol" data-symbol="{{ stock.symbol }}">
+                                            {{ stock.symbol }}
+                                        </a>
+                                    </td>
+                                    <td>{{ stock.company_name }}</td>
+                                    <td>${{ stock.prev_price }}</td>
+                                    <td>${{ stock.current_price }}</td>
+                                    <td class="{% if stock.gain_loss >= 0 %}profit{% else %}loss{% endif %}">
+                                        {{ stock.gain_loss }} ({{ stock.percent_change }}%)
+                                    </td>
+                                    <td>{{ '{:,.0f}'.format(stock.volume) }}</td>
+                                    <td>
+                                        <button class="btn btn-success btn-sm">Buy</button>
+                                        <button class="btn btn-danger btn-sm">Sell</button>
+                                        <i class="fas fa-glasses watchlist-icon text-primary" 
+                                           data-symbol="{{ stock.symbol }}" style="cursor: pointer;"></i>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('.watchlist-icon').click(function() {
+                const icon = $(this);
+                const symbol = icon.data('symbol');
+
+                $.ajax({
+                    url: `/toggle_watchlist/${symbol}`,
+                    method: 'POST',
+                    success: function(response) {
+                        if (response.in_watchlist) {
+                            icon.removeClass('text-muted').addClass('text-primary');
+                        } else {
+                            icon.removeClass('text-primary').addClass('text-muted');
+                        }
+                    },
+                    error: function() {
+                        alert('Error updating watchlist. Please try again.');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

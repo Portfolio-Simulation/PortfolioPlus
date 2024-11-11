@@ -93,6 +93,11 @@
                         <i class="fas fa-briefcase"></i> My Portfolio
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/watchlist">
+                        <i class="fas fa-glasses"></i> Watchlist
+                    </a>
+                </li>
             </ul>
             <span class="navbar-text mr-4">
                 <i class="fas fa-wallet"></i> Balance: $10,000.00
@@ -144,29 +149,16 @@
                                 <td>
                                     <button class="btn btn-success btn-sm">Buy</button>
                                     <button class="btn btn-danger btn-sm">Sell</button>
+                                    <i class="fas fa-glasses watchlist-icon {% if stock.in_watchlist %}text-primary{% else %}text-muted{% endif %}" 
+                                       data-symbol="{{ stock.symbol }}" style="cursor: pointer;"></i>
                                 </td>
                             </tr>
                             {% endfor %}
                         </tbody>
+                        
                     </table>
                 </div>
-                <div class="scroll-indicator" style="
-                    position: absolute;
-                    right: 15px;
-                    bottom: 15px;
-                    background: rgba(255,255,255,0.9);
-                    padding: 8px 12px;
-                    border-radius: 20px;
-                    font-size: 0.9em;
-                    color: #666;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                    display: flex;
-                    align-items: center;
-                    gap: 5px;
-                    z-index: 2;
-                ">
-                    <i class="fas fa-mouse"></i> Scroll for more stocks
-                </div>
+                
             </div>
         </div>
     </div>
@@ -322,6 +314,28 @@
                                 Error loading stock data. Please try again.
                             </div>
                         `);
+                    }
+                });
+            });
+        });
+
+        $(document).ready(function() {
+            $('.watchlist-icon').click(function() {
+                const icon = $(this);
+                const symbol = icon.data('symbol');
+
+                $.ajax({
+                    url: `/toggle_watchlist/${symbol}`,
+                    method: 'POST',
+                    success: function(response) {
+                        if (response.in_watchlist) {
+                            icon.removeClass('text-muted').addClass('text-primary');
+                        } else {
+                            icon.removeClass('text-primary').addClass('text-muted');
+                        }
+                    },
+                    error: function() {
+                        alert('Error updating watchlist. Please try again.');
                     }
                 });
             });
