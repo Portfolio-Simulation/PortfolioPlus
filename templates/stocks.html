@@ -14,36 +14,27 @@
             top: 0;
             z-index: 1;
         }
-
-        /* New styles for better scrolling */
         .table-responsive {
-            max-height: 70vh;  /* Viewport-based height */
+            max-height: 70vh;
             overflow-y: auto;
             border-radius: 8px;
             position: relative;
-            scrollbar-width: thin;  /* For Firefox */
+            scrollbar-width: thin;
         }
-
-        /* Custom scrollbar styling */
         .table-responsive::-webkit-scrollbar {
             width: 8px;
         }
-
         .table-responsive::-webkit-scrollbar-track {
             background: #f1f1f1;
             border-radius: 4px;
         }
-
         .table-responsive::-webkit-scrollbar-thumb {
             background: #888;
             border-radius: 4px;
         }
-
         .table-responsive::-webkit-scrollbar-thumb:hover {
             background: #555;
         }
-
-        /* Fade effect at bottom */
         .card-body::after {
             content: '';
             position: absolute;
@@ -54,33 +45,25 @@
             background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.9));
             pointer-events: none;
         }
-
-        /* Enhanced table styling */
         .table {
             margin-bottom: 0;
         }
-
         .table td {
             vertical-align: middle;
         }
-
         .stock-symbol {
             color: #2E86DE;
             text-decoration: none;
             font-weight: 500;
         }
-
         .stock-symbol:hover {
             text-decoration: none;
             color: #1C6BC3;
         }
-
-        /* Card enhancements */
         .card {
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             border: none;
         }
-
         .card-header {
             background-color: #f8f9fa;
             border-bottom: 1px solid rgba(0,0,0,0.1);
@@ -89,33 +72,11 @@
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <a class="navbar-brand" href="/dashboard">Portfolio+</a>
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav ml-auto">
-                <li class="nav-item">
-                    <a class="nav-link" href="/dashboard">
-                        <i class="fas fa-home"></i> Home
-                    </a>
-                </li>
-                <li class="nav-item active">
-                    <a class="nav-link" href="/stocks">
-                        <i class="fas fa-chart-line"></i> Stocks
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="/portfolio">
-                        <i class="fas fa-briefcase"></i> My Portfolio
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="/logout">
-                        <i class="fas fa-sign-out-alt"></i> Logout
-                    </a>
-                </li>
-            </ul>
+        <div class="container">
+            <!-- Center-aligned Portfolio+ icon -->
+            <div class="mx-auto">
+                <a class="navbar-brand" href="/dashboard">Portfolio+</a>
+            </div>
         </div>
     </nav>
 
@@ -183,7 +144,6 @@
         </div>
     </div>
 
-    <!-- Stock Chart Modal -->
     <div class="modal fade" id="stockChartModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -203,7 +163,6 @@
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
-    
     <script>
         $(document).ready(function() {
             $('.stock-symbol').click(function(e) {
@@ -214,7 +173,6 @@
                 $('#stockChartModalLabel').text(`${symbol} - ${companyName}`);
                 $('#stockChartModal').modal('show');
                 
-                // Better loading spinner
                 $('#stockChart').html(`
                     <div class="d-flex justify-content-center align-items-center" style="height: 500px;">
                         <div class="spinner-border text-primary" role="status">
@@ -240,8 +198,8 @@
                         };
         
                         const layout = {
-                            height: 400,  // Match the container height
-                            width: 750,   // Reduced width to fit modal
+                            height: 400,
+                            width: 750,
                             title: {
                                 text: `${symbol} - Historical Price Performance`,
                                 font: {
@@ -250,13 +208,13 @@
                                     color: '#2C3E50',
                                     weight: 500
                                 },
-                                y: 0.9  // Move title up slightly
+                                y: 0.9
                             },
                             margin: {
                                 l: 60,
                                 r: 40,
-                                t: 100,  // Increased top margin for title spacing
-                                b: 40    // Reduced bottom margin to give more space to plot
+                                t: 100,
+                                b: 40
                             },
                             xaxis: {
                                 title: {
@@ -270,7 +228,6 @@
                                 },
                                 showgrid: true,
                                 gridcolor: '#E5E5E5',
-                                gridwidth: 1,
                                 rangeslider: {
                                     visible: true,
                                     thickness: 0.05
@@ -279,8 +236,7 @@
                                     family: 'Helvetica Neue, Arial, sans-serif',
                                     size: 14,
                                     color: '#2C3E50'
-                                },
-                                tickangle: 0
+                                }
                             },
                             yaxis: {
                                 title: {
@@ -294,7 +250,6 @@
                                 },
                                 showgrid: true,
                                 gridcolor: '#E5E5E5',
-                                gridwidth: 1,
                                 tickprefix: '$',
                                 tickformat: ',.0f',
                                 tickfont: {
@@ -305,12 +260,6 @@
                             },
                             plot_bgcolor: 'white',
                             paper_bgcolor: 'white',
-                            margin: {
-                                l: 80,
-                                r: 60,  // Increased right margin
-                                t: 100,  // Increased top margin
-                                b: 80
-                            },
                             showlegend: false,
                             hovermode: 'x unified',
                             hoverlabel: {
@@ -331,7 +280,7 @@
                             toImageButtonOptions: {
                                 format: 'png',
                                 filename: `${symbol}_chart`,
-                                height: 400,  // Match the new height
+                                height: 400,
                                 width: 750,
                                 scale: 2
                             }

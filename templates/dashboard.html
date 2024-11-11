@@ -187,115 +187,111 @@
             // Refresh data every 5 minutes
             setInterval(updateMarketData, 300000);
         });
-    </script>
-    <!-- Add this at the bottom of your file, just before the closing </body> tag -->
-<script>
-   function updateChart(timeframe = '1M') {
-    $('.time-selector').removeClass('active');
-    $(`button[data-period="${timeframe}"]`).addClass('active');
 
-    $.get('/get_market_indices', function(data) {
-        if (data.error) {
-            console.error('Error fetching market data:', data.error);
-            return;
+        function updateChart(timeframe = '1M') {
+            $('.time-selector').removeClass('active');
+            $(`button[data-period="${timeframe}"]`).addClass('active');
+
+            $.get('/get_market_indices', function(data) {
+                if (data.error) {
+                    console.error('Error fetching market data:', data.error);
+                    return;
+                }
+
+                // Update market summary cards
+                updateMarketSummary({
+                    'SPY': { name: 'S&P 500', data: data.SPY },
+                    'DIA': { name: 'Dow Jones', data: data.DIA },
+                    'QQQ': { name: 'NASDAQ', data: data.QQQ },
+                    'IWM': { name: 'Russell 2000', data: data.IWM },
+                    'VGK': { name: 'FTSE Europe', data: data.VGK },
+                    'EEM': { name: 'Emerging Markets', data: data.EEM }
+                });
+
+                // Create traces for the chart
+                const traces = Object.entries(data).map(([symbol, indexData]) => ({
+                    name: indexData.name,
+                    x: indexData.dates,
+                    y: indexData.prices,
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: { 
+                        color: indexData.color,
+                        width: 2,
+                        shape: 'spline'
+                    },
+                    hovertemplate: 
+                        `<b>${indexData.name}</b><br>` +
+                        'Date: %{x}<br>' +
+                        'Price: $%{y:.2f}<br>' +
+                        '<extra></extra>'
+                }));
+
+                const layout = {
+                    showlegend: true,
+                    legend: {
+                        orientation: 'h',
+                        y: -0.2,
+                        x: 0.5,
+                        xanchor: 'center',
+                        font: { size: 12 }
+                    },
+                    xaxis: {
+                        showgrid: true,
+                        gridcolor: '#E5E5E5',
+                        gridwidth: 1,
+                        zeroline: false
+                    },
+                    yaxis: {
+                        showgrid: true,
+                        gridcolor: '#E5E5E5',
+                        gridwidth: 1,
+                        zeroline: false,
+                        tickprefix: '$'
+                    },
+                    plot_bgcolor: '#FFFFFF',
+                    paper_bgcolor: '#FFFFFF',
+                    margin: { t: 20, r: 10, b: 60, l: 60 },
+                    hovermode: 'x unified'
+                };
+
+                Plotly.newPlot('marketChart', traces, layout, {
+                    displayModeBar: true,
+                    displaylogo: false,
+                    responsive: true
+                });
+            });
         }
 
-        // Update market summary cards
-        updateMarketSummary({
-            'SPY': { name: 'S&P 500', data: data.SPY },
-            'DIA': { name: 'Dow Jones', data: data.DIA },
-            'QQQ': { name: 'NASDAQ', data: data.QQQ },
-            'IWM': { name: 'Russell 2000', data: data.IWM },
-            'VGK': { name: 'FTSE Europe', data: data.VGK },
-            'EEM': { name: 'Emerging Markets', data: data.EEM }
+        function updateMarketSummary(data) {
+            // Update S&P 500
+            $('#sp500Price').text('$' + data.SPY.current_price);
+            updateChangeDisplay('sp500Change', data.SPY.change, data.SPY.change_percent);
+
+            // Update Dow Jones
+            $('#dowPrice').text('$' + data.DIA.current_price);
+            updateChangeDisplay('dowChange', data.DIA.change, data.DIA.change_percent);
+
+            // Update NASDAQ
+            $('#nasdaqPrice').text('$' + data.QQQ.current_price);
+            updateChangeDisplay('nasdaqChange', data.QQQ.change, data.QQQ.change_percent);
+        }
+
+        function updateChangeDisplay(elementId, change, changePercent) {
+            const element = $(`#${elementId}`);
+            const isPositive = change >= 0;
+            const sign = isPositive ? '+' : '';
+            element.text(`${sign}$${change.toFixed(2)} (${sign}${changePercent.toFixed(2)}%)`);
+            element.removeClass('text-success text-danger');
+            element.addClass(isPositive ? 'text-success' : 'text-danger');
+        }
+
+        // Initialize when document is ready
+        $(document).ready(function() {
+            updateChart('1M');
+            // Refresh data every 5 minutes
+            setInterval(() => updateChart('1M'), 300000);
         });
-
-        // Create traces for the chart
-        const traces = Object.entries(data).map(([symbol, indexData]) => ({
-            name: indexData.name,
-            x: indexData.dates,
-            y: indexData.prices,
-            type: 'scatter',
-            mode: 'lines',
-            line: { 
-                color: indexData.color,
-                width: 2,
-                shape: 'spline'
-            },
-            hovertemplate: 
-                `<b>${indexData.name}</b><br>` +
-                'Date: %{x}<br>' +
-                'Price: $%{y:.2f}<br>' +
-                '<extra></extra>'
-        }));
-
-
-        const layout = {
-            showlegend: true,
-            legend: {
-                orientation: 'h',
-                y: -0.2,
-                x: 0.5,
-                xanchor: 'center',
-                font: { size: 12 }
-            },
-            xaxis: {
-                showgrid: true,
-                gridcolor: '#E5E5E5',
-                gridwidth: 1,
-                zeroline: false
-            },
-            yaxis: {
-                showgrid: true,
-                gridcolor: '#E5E5E5',
-                gridwidth: 1,
-                zeroline: false,
-                tickprefix: '$'
-            },
-            plot_bgcolor: '#FFFFFF',
-            paper_bgcolor: '#FFFFFF',
-            margin: { t: 20, r: 10, b: 60, l: 60 },
-            hovermode: 'x unified'
-        };
-
-        Plotly.newPlot('marketChart', traces, layout, {
-            displayModeBar: true,
-            displaylogo: false,
-            responsive: true
-    });
-}
-    
-        // Fetch market data
-
-    function updateMarketSummary(data) {
-        // Update S&P 500
-        $('#sp500Price').text('$' + data.SPY.current_price);
-        updateChangeDisplay('sp500Change', data.SPY.change, data.SPY.change_percent);
-    
-        // Update Dow Jones
-        $('#dowPrice').text('$' + data.DIA.current_price);
-        updateChangeDisplay('dowChange', data.DIA.change, data.DIA.change_percent);
-    
-        // Update NASDAQ
-        $('#nasdaqPrice').text('$' + data.QQQ.current_price);
-        updateChangeDisplay('nasdaqChange', data.QQQ.change, data.QQQ.change_percent);
-    }
-    
-    function updateChangeDisplay(elementId, change, changePercent) {
-        const element = $(`#${elementId}`);
-        const isPositive = change >= 0;
-        const sign = isPositive ? '+' : '';
-        element.text(`${sign}$${change.toFixed(2)} (${sign}${changePercent.toFixed(2)}%)`);
-        element.removeClass('text-success text-danger');
-        element.addClass(isPositive ? 'text-success' : 'text-danger');
-    }
-    
-    // Initialize when document is ready
-    $(document).ready(function() {
-        updateChart('1M');
-        // Refresh data every 5 minutes
-        setInterval(() => updateChart('1M'), 300000);
-    });
     </script>
 </body>
 </html>
