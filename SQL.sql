@@ -40,4 +40,28 @@ CREATE TABLE watchlist (
     FOREIGN KEY (user_id) REFERENCES users(user_id)  
 );
 
+Select * From watchlist;
+-- Creating the Portfolios Table
+CREATE TABLE Portfolios (
+    portfolio_id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT,
+    stock_symbol VARCHAR(10),
+    quantity INT,
+    sector VARCHAR(50),
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
 
+Select * From Portfolios;
+
+-- Creating the Transactions Table
+CREATE TABLE Transactions (
+    transaction_id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT,
+    stock_symbol VARCHAR(10),
+    transaction_type ENUM('buy', 'sell'),
+    quantity INT,
+    price DECIMAL(10, 2),
+    transaction_date DATETIME,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
+Select * From Transactions;
