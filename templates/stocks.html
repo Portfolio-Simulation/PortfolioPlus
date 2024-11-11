@@ -4,71 +4,261 @@
     <meta charset="UTF-8">
     <title>Stocks | Portfolio+</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
         .profit { color: green; }
         .loss { color: red; }
+        .table th { 
+            background-color: #f8f9fa;
+        }
     </style>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <a class="navbar-brand" href="#">Portfolio+</a>
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <a class="navbar-brand" href="/dashboard">Portfolio+</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav">
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ml-auto">
                 <li class="nav-item">
-                    <a class="nav-link" href="/dashboard">Home</a>
+                    <a class="nav-link" href="/dashboard">
+                        <i class="fas fa-home"></i> Home
+                    </a>
+                </li>
+                <li class="nav-item active">
+                    <a class="nav-link" href="/stocks">
+                        <i class="fas fa-chart-line"></i> Stocks
+                    </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="/stocks">Stocks</a>
+                    <a class="nav-link" href="/portfolio">
+                        <i class="fas fa-briefcase"></i> My Portfolio
+                    </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="/portfolio">My Portfolio</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="/logout">Logout</a>
+                    <a class="nav-link" href="/logout">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </a>
                 </li>
             </ul>
         </div>
     </nav>
 
-    <div class="container mt-5">
-        <h1>Current Stock Prices</h1>
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>Symbol</th>
-                    <th>Current Price</th>
-                    <th>Yesterday's Price</th>
-                    <th>P&L</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for stock in stocks %}
-                <tr>
-                    <td>{{ stock.symbol }}</td>
-                    <td>{{ stock.day_minus_1 }}</td> <!-- Current Price -->
-                    <td>{{ stock.day_minus_2 }}</td> <!-- Yesterday's Price -->
-                    <td>
-                        {% if stock.gain_loss >= 0 %}
-                            <span class="profit">+{{ stock.gain_loss }}</span>
-                        {% else %}
-                            <span class="loss">{{ stock.gain_loss }}</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <button class="btn btn-success btn-sm">Buy</button>
-                        <button class="btn btn-danger btn-sm">Sell</button>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <div class="container mt-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Stock Prices</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>Company Name</th>
+                                <th>Previous Price</th>
+                                <th>Current Price</th>
+                                <th>Gain/Loss</th>
+                                <th>Volume</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stock in stocks %}
+                            <tr>
+                                <td>
+                                    <a href="#" class="stock-symbol" data-symbol="{{ stock.symbol }}">
+                                        {{ stock.symbol }}
+                                    </a>
+                                </td>
+                                <td>{{ stock.company_name }}</td>
+                                <td>${{ stock.prev_price }}</td>
+                                <td>${{ stock.current_price }}</td>
+                                <td class="{% if stock.gain_loss >= 0 %}profit{% else %}loss{% endif %}">
+                                    {{ stock.gain_loss }} ({{ stock.percent_change }}%)
+                                </td>
+                                <td>{{ '{:,.0f}'.format(stock.volume) }}</td>
+                                <td>
+                                    <button class="btn btn-success btn-sm">Buy</button>
+                                    <button class="btn btn-danger btn-sm">Sell</button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <!-- Stock Chart Modal -->
+    <div class="modal fade" id="stockChartModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="stockChartModalLabel" style="font-family: 'Helvetica Neue', Arial, sans-serif; font-weight: 500;"></h5>
+                    <button type="button" class="close" data-dismiss="modal">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div id="stockChart" style="height: 400px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        $(document).ready(function() {
+            $('.stock-symbol').click(function(e) {
+                e.preventDefault();
+                const symbol = $(this).data('symbol');
+                const companyName = $(this).closest('tr').find('td:eq(1)').text();
+                
+                $('#stockChartModalLabel').text(`${symbol} - ${companyName}`);
+                $('#stockChartModal').modal('show');
+                
+                // Better loading spinner
+                $('#stockChart').html(`
+                    <div class="d-flex justify-content-center align-items-center" style="height: 500px;">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="sr-only">Loading...</span>
+                        </div>
+                    </div>
+                `);
+                
+                $.ajax({
+                    url: `/get_stock_history/${symbol}`,
+                    method: 'GET',
+                    success: function(data) {
+                        const trace = {
+                            x: data.dates,
+                            y: data.prices,
+                            type: 'scatter',
+                            mode: 'lines',
+                            name: 'Price',
+                            line: {
+                                color: '#2E86DE',
+                                width: 2.5
+                            }
+                        };
+        
+                        const layout = {
+                            height: 400,  // Match the container height
+                            width: 750,   // Reduced width to fit modal
+                            title: {
+                                text: `${symbol} - Historical Price Performance`,
+                                font: {
+                                    family: 'Helvetica Neue, Arial, sans-serif',
+                                    size: 24,
+                                    color: '#2C3E50',
+                                    weight: 500
+                                },
+                                y: 0.9  // Move title up slightly
+                            },
+                            margin: {
+                                l: 60,
+                                r: 40,
+                                t: 100,  // Increased top margin for title spacing
+                                b: 40    // Reduced bottom margin to give more space to plot
+                            },
+                            xaxis: {
+                                title: {
+                                    text: 'Date',
+                                    font: {
+                                        family: 'Helvetica Neue, Arial, sans-serif',
+                                        size: 18,
+                                        color: '#2C3E50'
+                                    },
+                                    standoff: 25
+                                },
+                                showgrid: true,
+                                gridcolor: '#E5E5E5',
+                                gridwidth: 1,
+                                rangeslider: {
+                                    visible: true,
+                                    thickness: 0.05
+                                },
+                                tickfont: {
+                                    family: 'Helvetica Neue, Arial, sans-serif',
+                                    size: 14,
+                                    color: '#2C3E50'
+                                },
+                                tickangle: 0
+                            },
+                            yaxis: {
+                                title: {
+                                    text: 'Price ($)',
+                                    font: {
+                                        family: 'Helvetica Neue, Arial, sans-serif',
+                                        size: 18,
+                                        color: '#2C3E50'
+                                    },
+                                    standoff: 25
+                                },
+                                showgrid: true,
+                                gridcolor: '#E5E5E5',
+                                gridwidth: 1,
+                                tickprefix: '$',
+                                tickformat: ',.0f',
+                                tickfont: {
+                                    family: 'Helvetica Neue, Arial, sans-serif',
+                                    size: 14,
+                                    color: '#2C3E50'
+                                }
+                            },
+                            plot_bgcolor: 'white',
+                            paper_bgcolor: 'white',
+                            margin: {
+                                l: 80,
+                                r: 60,  // Increased right margin
+                                t: 100,  // Increased top margin
+                                b: 80
+                            },
+                            showlegend: false,
+                            hovermode: 'x unified',
+                            hoverlabel: {
+                                bgcolor: 'white',
+                                font: {
+                                    family: 'Helvetica Neue, Arial, sans-serif',
+                                    size: 14
+                                },
+                                bordercolor: '#2E86DE'
+                            }
+                        };
+        
+                        const config = {
+                            responsive: true,
+                            displayModeBar: true,
+                            displaylogo: false,
+                            modeBarButtonsToRemove: ['lasso2d', 'select2d'],
+                            toImageButtonOptions: {
+                                format: 'png',
+                                filename: `${symbol}_chart`,
+                                height: 400,  // Match the new height
+                                width: 750,
+                                scale: 2
+                            }
+                        };
+        
+                        Plotly.newPlot('stockChart', [trace], layout, config);
+                    },
+                    error: function() {
+                        $('#stockChart').html(`
+                            <div class="alert alert-danger text-center">
+                                <i class="fas fa-exclamation-circle"></i>
+                                Error loading stock data. Please try again.
+                            </div>
+                        `);
+                    }
+                });
+            });
+        });
+    </script>
 </body>
 </html>

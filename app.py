@@ -97,29 +97,96 @@ def logout():
 
 @app.route('/stocks')
 def stocks():
-    # List of stock symbols to display
-    stock_symbols = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA']
+    stock_symbols = [
+        'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 
+        'META', 'NVDA', 'JPM', 'V', 'WMT',
+        'PG', 'JNJ', 'KO', 'DIS', 'NFLX',
+        'ADBE', 'CSCO', 'INTC', 'PEP', 'BAC'
+    ]
     stocks_data = []
-
-    # Fetch stock data for the past two days using yfinance
+    
     for symbol in stock_symbols:
-        ticker = yf.Ticker(symbol)
-        stock_info = ticker.history(period="5d")  # Fetch the last 5 days to be safe
-        
-        if len(stock_info) >= 3:
-            day_minus_2 = stock_info['Close'][-3]
-            day_minus_1 = stock_info['Close'][-2]
-            gain_loss = day_minus_1 - day_minus_2  # Calculate Gain/Loss
-
-            # Append data to stocks_data list
-            stocks_data.append({
-                'symbol': symbol,
-                'day_minus_2': round(day_minus_2, 2),
-                'day_minus_1': round(day_minus_1, 2),
-                'gain_loss': round(gain_loss, 2)
-            })
+        try:
+            ticker = yf.Ticker(symbol)
+            info = ticker.info
+            hist = ticker.history(period="5d")
+            
+            if len(hist) >= 2:
+                company_name = info.get('longName', symbol)
+                current_price = hist['Close'][-1]
+                prev_price = hist['Close'][-2]
+                gain_loss = round(current_price - prev_price, 2)
+                percent_change = round((gain_loss / prev_price) * 100, 2)
+                
+                stocks_data.append({
+                    'symbol': symbol,
+                    'company_name': company_name,
+                    'prev_price': round(prev_price, 2),
+                    'current_price': round(current_price, 2),
+                    'gain_loss': gain_loss,
+                    'percent_change': percent_change,
+                    'volume': int(hist['Volume'][-1])
+                })
+        except Exception as e:
+            print(f"Error fetching data for {symbol}: {str(e)}")
+            continue
 
     return render_template('stocks.html', stocks=stocks_data)
 
+@app.route('/get_stock_history/<symbol>')
+def get_stock_history(symbol):
+    try:
+        ticker = yf.Ticker(symbol)
+        history = ticker.history(period="1y")
+        
+        if history.empty:
+            return jsonify({'error': 'No data available'}), 404
+        
+        data = {
+            'dates': [date.strftime('%Y-%m-%d') for date in history.index],
+            'prices': history['Close'].tolist(),
+            'volume': history['Volume'].tolist(),
+            'symbol': symbol
+        }
+        
+        return jsonify(data)
+    except Exception as e:
+        print(f"Error fetching data for {symbol}: {str(e)}")
+        return jsonify({'error': 'Failed to fetch stock data'}), 500
+
+@app.route('/get_market_indices')
+def get_market_indices():
+    try:
+        # Extended list of market indices
+        indices = {
+            'SPY': {'name': 'S&P 500', 'color': '#2E86DE'},
+            'DIA': {'name': 'Dow Jones', 'color': '#10AC84'},
+            'QQQ': {'name': 'NASDAQ', 'color': '#5758BB'},
+            'IWM': {'name': 'Russell 2000', 'color': '#FF6B6B'},  # Small-cap index
+            'VGK': {'name': 'FTSE Europe', 'color': '#A8E6CF'},  # European markets
+            'EEM': {'name': 'Emerging Markets', 'color': '#FFD93D'}  # Emerging markets
+        }
+        
+        data = {}
+        for symbol, info in indices.items():
+            ticker = yf.Ticker(symbol)
+            hist = ticker.history(period="1y")
+            
+            if not hist.empty:
+                data[symbol] = {
+                    'name': info['name'],
+                    'color': info['color'],
+                    'prices': hist['Close'].tolist(),
+                    'dates': [date.strftime('%Y-%m-%d') for date in hist.index],
+                    'current_price': round(hist['Close'][-1], 2),
+                    'change': round(hist['Close'][-1] - hist['Close'][-2], 2),
+                    'change_percent': round(((hist['Close'][-1] - hist['Close'][-2]) / hist['Close'][-2]) * 100, 2)
+                }
+            
+        return jsonify(data)
+    except Exception as e:
+        print(f"Error fetching market data: {str(e)}")
+        return jsonify({'error': 'Failed to fetch market data'}), 500
+    
 if __name__ == '__main__':
     app.run(debug=True)
