@@ -31,20 +31,13 @@ CREATE TABLE admin (
 
 Select * From admin;
 
-CREATE TABLE stocks (
-    stock_symbol VARCHAR(10) PRIMARY KEY,
-    date DATE NOT NULL,
-    open_price DECIMAL(10, 2) NOT NULL,
-    close_price DECIMAL(10, 2) NOT NULL
+CREATE TABLE watchlist (
+    watchlist_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    stock_symbol VARCHAR(5) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (user_id, stock_symbol), 
+    FOREIGN KEY (user_id) REFERENCES users(user_id)  
 );
 
-INSERT INTO stocks (stock_symbol, date, open_price, close_price)
-VALUES 
-('AAPL', '2024-11-01', 150.00, 155.00),
-('MSFT', '2024-11-01', 295.00, 300.50),
-('GOOGL', '2024-11-01', 2800.00, 2850.75),
-('AMZN', '2024-11-01', 3450.00, 3500.10),
-('TSLA', '2024-11-01', 800.00, 820.50);
 
-
-Select * From stocks;
