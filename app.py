@@ -112,7 +112,7 @@ def dashboard():
     user_id = session['user_id']
     cursor = db.cursor()
     cursor.execute("SELECT wallet_balance FROM users WHERE user_id = %s", (user_id,))
-    wallet_balance = cursor.fetchone()[0]  # Fetch the wallet balance
+    wallet_balance = cursor.fetchone()[0]
 
     username = session.get('user')
     return render_template('dashboard.html', username=username, wallet_balance=wallet_balance)
@@ -136,9 +136,11 @@ def stocks():
     cursor = db.cursor()
     cursor.execute("SELECT stock_symbol FROM watchlist WHERE user_id = %s", (user_id,))
     watchlist_symbols = {row[0] for row in cursor.fetchall()}
+    cursor.execute("SELECT wallet_balance FROM users WHERE user_id = %s", (user_id,))
+    wallet_balance = cursor.fetchone()[0]  
 
     stocks_data = fetch_stock_data(stock_symbols, watchlist_symbols)
-    return render_template('stocks.html', stocks=stocks_data)
+    return render_template('stocks.html', stocks=stocks_data, wallet_balance=wallet_balance)
 
 @app.route('/get_stock_history/<symbol>')
 def get_stock_history(symbol):
@@ -169,9 +171,11 @@ def portfolio():
     cursor = db.cursor()
     cursor.execute("SELECT stock_symbol, company_name, quantity, sector FROM portfolios WHERE user_id = %s", (user_id,))
     stocks = cursor.fetchall()
+    cursor.execute("SELECT wallet_balance FROM users WHERE user_id = %s", (user_id,))
+    wallet_balance = cursor.fetchone()[0]
 
     stock_list = [{'symbol': stock[0], 'company_name': stock[1], 'quantity': stock[2], 'sector': stock[3]} for stock in stocks]
-    return render_template('portfolio.html', stocks=stock_list)
+    return render_template('portfolio.html', stocks=stock_list, wallet_balance=wallet_balance)
 
 @app.route('/watchlist')
 def watchlist():
@@ -183,11 +187,13 @@ def watchlist():
     cursor = db.cursor()
     cursor.execute("SELECT stock_symbol FROM watchlist WHERE user_id = %s", (user_id,))
     watchlist_items = cursor.fetchall()
+    cursor.execute("SELECT wallet_balance FROM users WHERE user_id = %s", (user_id,))
+    wallet_balance = cursor.fetchone()[0]
 
     stock_symbols = [item[0] for item in watchlist_items]
     stocks_data = fetch_stock_data(stock_symbols)
     message = None if stocks_data else "You have no stocks in your watchlist."
-    return render_template('watchlist.html', stocks=stocks_data, message=message)
+    return render_template('watchlist.html', stocks=stocks_data, message=message, wallet_balance=wallet_balance)
 
 @app.route('/toggle_watchlist/<symbol>', methods=['POST'])
 def toggle_watchlist(symbol):
