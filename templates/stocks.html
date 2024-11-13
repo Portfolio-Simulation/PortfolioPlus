@@ -121,136 +121,216 @@
         </div>
     </div>
 
-    <<!-- Buy/Sell Modal -->
-<div class="modal fade" id="buySellModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Buy/Sell Stocks</h5>
-                <button type="button" class="close" data-dismiss="modal">
-                    <span>&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <form id="buySellForm">
-                    <div class="form-group">
-                        <label for="stockSymbol">Stock Symbol</label>
-                        <input type="text" id="stockSymbol" class="form-control" readonly>
-                    </div>
-                    <div class="form-group">
-                        <label for="transactionType">Transaction Type</label>
-                        <select id="transactionType" class="form-control">
-                            <option value="buy">Buy</option>
-                            <option value="sell">Sell</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="stockQuantity">Quantity</label>
-                        <input type="number" step="0.01" id="stockQuantity" class="form-control" min="0.01" value="1">
-                    </div>
-                    <div class="form-group">
-                        <label for="totalAmount">Amount ($)</label>
-                        <input type="number" step="0.01" id="totalAmount" class="form-control">
-                    </div>
-                    <div class="alert alert-danger d-none" id="errorMessage"></div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="confirmTransaction">Confirm</button>
+    <!-- Stock Details Modal -->
+    <div class="modal fade" id="stockDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="stockDetailsModalLabel"></h5>
+                    <button type="button" class="close" data-dismiss="modal">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div id="stockChart" style="height: 400px;"></div>
+                </div>
             </div>
         </div>
     </div>
-</div>
+
+    <!-- Buy/Sell Modal -->
+    <div class="modal fade" id="buySellModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Buy/Sell Stocks</h5>
+                    <button type="button" class="close" data-dismiss="modal">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="buySellForm">
+                        <div class="form-group">
+                            <label for="stockSymbol">Stock Symbol</label>
+                            <input type="text" id="stockSymbol" class="form-control" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label for="transactionType">Transaction Type</label>
+                            <select id="transactionType" class="form-control">
+                                <option value="buy">Buy</option>
+                                <option value="sell">Sell</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="stockQuantity">Quantity</label>
+                            <input type="number" step="0.01" id="stockQuantity" class="form-control" min="0.01" value="1">
+                        </div>
+                        <div class="form-group">
+                            <label for="totalAmount">Amount ($)</label>
+                            <input type="number" step="0.01" id="totalAmount" class="form-control">
+                        </div>
+                        <div class="alert alert-danger d-none" id="errorMessage"></div>
+                        <div class="alert alert-success d-none" id="successMessage"></div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="confirmTransaction">Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         $(document).ready(function() {
-    let currentPrice = 0;
+            // Handle clicking on stock symbols to display modal with chart
+            $('.stock-symbol').click(function(e) {
+                e.preventDefault();
+                const symbol = $(this).data('symbol');
+                const companyName = $(this).text();
 
-    // Open Buy/Sell Modal
-    $('.btn-success, .btn-danger').click(function() {
-        const symbol = $(this).closest('tr').find('.stock-symbol').text();
-        currentPrice = parseFloat($(this).closest('tr').find('td:eq(3)').text().replace('$', ''));
-        const transactionType = $(this).hasClass('btn-success') ? 'buy' : 'sell';
+                $('#stockDetailsModalLabel').text(`${symbol} - ${companyName}`);
+                $('#stockDetailsModal').modal('show');
 
-        $('#stockSymbol').val(symbol);
-        $('#transactionType').val(transactionType);
-        $('#stockQuantity').val(1);
-        $('#totalAmount').val(currentPrice.toFixed(2));
-        $('#buySellModal').modal('show');
-    });
+                // Show loading spinner while fetching data
+                $('#stockChart').html(`
+                    <div class="d-flex justify-content-center align-items-center" style="height: 400px;">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="sr-only">Loading...</span>
+                        </div>
+                    </div>
+                `);
 
-    // Update Amount based on Quantity
-    $('#stockQuantity').on('input', function() {
-        const quantity = parseFloat($(this).val());
-        if (!isNaN(quantity)) {
-            $('#totalAmount').val((quantity * currentPrice).toFixed(2));
-        }
-    });
+                // Fetch stock history data
+                $.ajax({
+                    url: `/get_stock_history/${symbol}`,
+                    method: 'GET',
+                    success: function(data) {
+                        if (data.error) {
+                            $('#stockChart').html(`
+                                <div class="alert alert-danger text-center">
+                                    <i class="fas fa-exclamation-circle"></i> ${data.error}
+                                </div>
+                            `);
+                        } else {
+                            const trace = {
+                                x: data.dates,
+                                y: data.prices,
+                                type: 'scatter',
+                                mode: 'lines',
+                                line: { color: '#2E86DE', width: 2 },
+                                name: 'Price'
+                            };
+                            const layout = {
+                                title: `${symbol} - Historical Price Performance`,
+                                xaxis: { title: 'Date' },
+                                yaxis: { title: 'Price ($)' },
+                                plot_bgcolor: '#ffffff',
+                                paper_bgcolor: '#ffffff'
+                            };
+                            Plotly.newPlot('stockChart', [trace], layout);
+                        }
+                    },
+                    error: function() {
+                        $('#stockChart').html(`
+                            <div class="alert alert-danger text-center">
+                                <i class="fas fa-exclamation-circle"></i> Error fetching stock data. Please try again.
+                            </div>
+                        `);
+                    }
+                });
+            });
 
-    // Update Quantity based on Amount
-    $('#totalAmount').on('input', function() {
-        const amount = parseFloat($(this).val());
-        if (!isNaN(amount) && currentPrice > 0) {
-            $('#stockQuantity').val((amount / currentPrice).toFixed(2));
-        }
-    });
+            // Handle Buy/Sell Modal and transaction confirmation
+            let currentPrice = 0;
 
-    // Handle Confirm Transaction
-    $('#confirmTransaction').click(function() {
-        const symbol = $('#stockSymbol').val();
-        const transactionType = $('#transactionType').val();
-        const quantity = parseFloat($('#stockQuantity').val());
-        const amount = parseFloat($('#totalAmount').val());
+            $('.btn-success, .btn-danger').click(function() {
+                const symbol = $(this).closest('tr').find('.stock-symbol').text();
+                currentPrice = parseFloat($(this).closest('tr').find('td:eq(3)').text().replace('$', ''));
+                const transactionType = $(this).hasClass('btn-success') ? 'buy' : 'sell';
 
-        if (isNaN(quantity) || isNaN(amount) || quantity <= 0 || amount <= 0) {
-            $('#errorMessage').text('Invalid quantity or amount. Please check your inputs.').removeClass('d-none');
-            return;
-        }
+                $('#stockSymbol').val(symbol);
+                $('#transactionType').val(transactionType);
+                $('#stockQuantity').val(1);
+                $('#totalAmount').val(currentPrice.toFixed(2));
+                $('#buySellModal').modal('show');
+            });
 
-        $.ajax({
-            url: `/process_transaction`,
-            method: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({ symbol: symbol, transaction_type: transactionType, quantity: quantity, amount: amount }),
-            success: function(response) {
-                if (response.error) {
-                    $('#errorMessage').text(response.error).removeClass('d-none');
-                } else {
-                    location.reload(); // Reload the page on success
+            $('#stockQuantity').on('input', function() {
+                const quantity = parseFloat($(this).val());
+                if (!isNaN(quantity)) {
+                    $('#totalAmount').val((quantity * currentPrice).toFixed(2));
                 }
-            },
-            error: function() {
-                $('#errorMessage').text('Error processing the transaction. Please try again.').removeClass('d-none');
-            }
-        });
-    });
+            });
 
-    // Toggle Watchlist Icon
-    $('.watchlist-icon').click(function() {
-        const icon = $(this);
-        const symbol = icon.data('symbol');
-
-        $.ajax({
-            url: `/toggle_watchlist/${symbol}`,
-            method: 'POST',
-            success: function(response) {
-                if (response.in_watchlist) {
-                    icon.removeClass('text-muted').addClass('text-primary');
-                } else {
-                    icon.removeClass('text-primary').addClass('text-muted');
+            $('#totalAmount').on('input', function() {
+                const amount = parseFloat($(this).val());
+                if (!isNaN(amount) && currentPrice > 0) {
+                    $('#stockQuantity').val((amount / currentPrice).toFixed(2));
                 }
-            },
-            error: function() {
-                alert('Error updating watchlist. Please try again.');
-            }
-        });
-    });
-});
+            });
 
+            $('#confirmTransaction').click(function() {
+                const symbol = $('#stockSymbol').val();
+                const transactionType = $('#transactionType').val();
+                const quantity = parseFloat($('#stockQuantity').val());
+                const amount = parseFloat($('#totalAmount').val());
+
+                if (isNaN(quantity) || isNaN(amount) || quantity <= 0 || amount <= 0) {
+                    $('#errorMessage').text('Invalid quantity or amount. Please check your inputs.').removeClass('d-none');
+                    $('#successMessage').addClass('d-none');
+                    return;
+                }
+
+                $.ajax({
+                    url: `/process_transaction`,
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ symbol: symbol, transaction_type: transactionType, quantity: quantity, amount: amount }),
+                    success: function(response) {
+                        if (response.error) {
+                            $('#errorMessage').text(response.error).removeClass('d-none');
+                            $('#successMessage').addClass('d-none');
+                        } else {
+                            const confirmationMessage = transactionType === 'buy' ? 'Buy order confirmed!' : 'Sell order confirmed!';
+                            $('#successMessage').text(confirmationMessage).removeClass('d-none');
+                            $('#errorMessage').addClass('d-none');
+                            setTimeout(() => {
+                                location.reload();
+                            }, 1500); // Reload the page after a short delay
+                        }
+                    },
+                    error: function() {
+                        $('#errorMessage').text('Error processing the transaction. Please try again.').removeClass('d-none');
+                        $('#successMessage').addClass('d-none');
+                    }
+                });
+            });
+
+            // Toggle Watchlist Icon
+            $('.watchlist-icon').click(function() {
+                const icon = $(this);
+                const symbol = icon.data('symbol');
+
+                $.ajax({
+                    url: `/toggle_watchlist/${symbol}`,
+                    method: 'POST',
+                    success: function(response) {
+                        if (response.in_watchlist) {
+                            icon.removeClass('text-muted').addClass('text-primary');
+                        } else {
+                            icon.removeClass('text-primary').addClass('text-muted');
+                        }
+                    },
+                    error: function() {
+                        alert('Error updating watchlist. Please try again.');
+                    }
+                });
+            });
+        });
     </script>
 </body>
 </html>

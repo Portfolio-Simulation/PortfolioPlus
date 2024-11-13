@@ -105,11 +105,18 @@ def register():
 
 @app.route('/dashboard')
 def dashboard():
-    if 'user' not in session:
+    if 'user_id' not in session:
         flash('Please log in to access the dashboard.', 'danger')
         return redirect(url_for('home'))
+
+    user_id = session['user_id']
+    cursor = db.cursor()
+    cursor.execute("SELECT wallet_balance FROM users WHERE user_id = %s", (user_id,))
+    wallet_balance = cursor.fetchone()[0]  # Fetch the wallet balance
+
     username = session.get('user')
-    return render_template('dashboard.html', username=username)
+    return render_template('dashboard.html', username=username, wallet_balance=wallet_balance)
+
 
 @app.route('/logout')
 def logout():
@@ -275,6 +282,38 @@ def process_transaction():
         db.commit()
 
     return jsonify({'success': True})
+
+@app.route('/get_market_indices')
+def get_market_indices():
+    try:
+        indices = {
+            'SPY': {'name': 'S&P 500', 'color': '#2E86DE'},
+            'DIA': {'name': 'Dow Jones', 'color': '#10AC84'},
+            'QQQ': {'name': 'NASDAQ', 'color': '#5758BB'},
+            'IWM': {'name': 'Russell 2000', 'color': '#FF6B6B'}, 
+            'VGK': {'name': 'FTSE Europe', 'color': '#A8E6CF'},  
+            'EEM': {'name': 'Emerging Markets', 'color': '#FFD93D'}
+        }
+        data = {}
+        for symbol, info in indices.items():
+            ticker = yf.Ticker(symbol)
+            hist = ticker.history(period="1y")
+            if hist.empty:
+                continue
+            data[symbol] = {
+                'name': info['name'],
+                'color': info['color'],
+                'dates': [date.strftime('%Y-%m-%d') for date in hist.index],
+                'prices': hist['Close'].tolist(),
+                'current_price': round(hist['Close'][-1], 2),
+                'change': round(hist['Close'][-1] - hist['Close'][-2], 2),
+                'change_percent': round(((hist['Close'][-1] - hist['Close'][-2]) / hist['Close'][-2]) * 100, 2)
+            }
+        return jsonify(data)
+    except Exception as e:
+        print(f"Error fetching market data: {str(e)}")
+        return jsonify({'error': 'Failed to fetch market data'}), 500
+
 
 if __name__ == '__main__':
     app.run(debug=True, port=5001)

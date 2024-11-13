@@ -11,7 +11,7 @@ CREATE TABLE users (
     email VARCHAR(100) NOT NULL,
     phone VARCHAR(15),
     address VARCHAR(255),
-    wallet_balance FLOAT DEFAULT 10000.00,  -- Changed to FLOAT
+    wallet_balance DECIMAL(10,2) DEFAULT 10000.00,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
