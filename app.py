@@ -86,23 +86,32 @@ def register():
         password = request.form.get('password')
 
         cursor = db.cursor()
+
+        # Server-side validation for username
         cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
         existing_user = cursor.fetchone()
-
         if existing_user:
-            flash('Username already taken. Please choose another.', 'danger')
-        else:
-            cursor.execute(
-                "INSERT INTO users (name, email, phone, address, username, password) "
-                "VALUES (%s, %s, %s, %s, %s, %s)",
-                (name, email, phone, address, username, password)
-            )
-            db.commit()
-            flash('Registration successful! You can now log in.', 'success')
-            return redirect(url_for('home'))
+            flash('Username is already taken. Please choose another.', 'danger')
+            return redirect(url_for('register'))
+
+        # Server-side validation for email
+        cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+        existing_email = cursor.fetchone()
+        if existing_email:
+            flash('Email is already registered. Please use another email.', 'danger')
+            return redirect(url_for('register'))
+
+        # If both checks pass, register the user
+        cursor.execute(
+            "INSERT INTO users (name, email, phone, address, username, password) "
+            "VALUES (%s, %s, %s, %s, %s, %s)",
+            (name, email, phone, address, username, password)
+        )
+        db.commit()
+        flash('Registration successful! You can now log in.', 'success')
+        return redirect(url_for('home'))
 
     return render_template('register.html')
-
 @app.route('/dashboard')
 def dashboard():
     if 'user_id' not in session:
@@ -319,6 +328,41 @@ def get_market_indices():
     except Exception as e:
         print(f"Error fetching market data: {str(e)}")
         return jsonify({'error': 'Failed to fetch market data'}), 500
+
+@app.route('/check_username', methods=['POST'])
+def check_username():
+    data = request.get_json()  # Use get_json() to parse JSON data
+    username = data.get('username')
+    cursor = db.cursor()
+    cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
+    user = cursor.fetchone()
+    cursor.close()
+    if user:
+        return jsonify({'available': False})
+    else:
+        return jsonify({'available': True})
+
+@app.route('/check_email', methods=['POST'])
+def check_email():
+    data = request.get_json()  # Use get_json() to parse JSON data
+    email = data.get('email')  # Retrieve the email from the JSON data
+
+    if not email:
+        return jsonify({'error': 'Email not provided'}), 400
+
+    cursor = db.cursor()
+    cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+    
+    # Fetch all results to clear any unread results
+    user = cursor.fetchone()
+    cursor.fetchall()  # This ensures all results are read, even if not used
+
+    cursor.close()
+
+    if user:
+        return jsonify({'available': False})
+    else:   
+        return jsonify({'available': True})
 
 
 if __name__ == '__main__':
