@@ -145,6 +145,7 @@
                                     <button class="btn btn-sm btn-outline-light" onclick="updateChart('3M')">3M</button>
                                     <button class="btn btn-sm btn-outline-light" onclick="updateChart('6M')">6M</button>
                                     <button class="btn btn-sm btn-outline-light" onclick="updateChart('1Y')">1Y</button>
+
                                 </div>
                             </div>
                             <div class="card-body">
@@ -171,98 +172,98 @@
             </div>
         </div>
     </div>
-
+    
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // Function to fetch and display market data
+        $(document).ready(function() {
+            updateMarketData();
+            setInterval(updateMarketData, 300000);
+        });
+
         function updateMarketData() {
-            $.get('/get_market_indices', function(data) {
+        $.get('/get_market_indices', function(data) {
+            if (data.error) {
+                console.error('Error fetching market data:', data.error);
+                return;
+            }
+
+        // Update the chart with the received data
+        updateMarketChart(data);
+    });
+}
+    function updateMarketChart(data) {
+        const traces = Object.keys(data).map(symbol => ({
+            name: data[symbol].name,
+            x: data[symbol].dates,
+            y: data[symbol].prices,
+            type: 'scatter',
+            mode: 'lines',
+            line: { 
+                color: data[symbol].color,
+                width: 2,
+                shape: 'spline'
+            },
+            hovertemplate: 
+                `<b>${data[symbol].name}</b><br>` +
+                'Date: %{x}<br>' +
+                'Price: $%{y:.2f}<br>' +
+                '<extra></extra>'
+        }));
+
+        const layout = {
+            title: 'Market Indices',
+            showlegend: true,
+            legend: {
+                orientation: 'h',
+                y: -0.2,
+                x: 0.5,
+                xanchor: 'center',
+                font: { size: 12 }
+            },
+            xaxis: {
+                showgrid: true,
+                gridcolor: '#E5E5E5',
+                gridwidth: 1,
+                zeroline: false
+            },
+            yaxis: {
+                showgrid: true,
+                gridcolor: '#E5E5E5',
+                gridwidth: 1,
+                zeroline: false,
+                tickprefix: '$'
+            },
+            plot_bgcolor: '#FFFFFF',
+            paper_bgcolor: '#FFFFFF',
+            margin: { t: 20, r: 10, b: 60, l: 60 },
+            hovermode: 'x unified'
+        };
+
+        // Render the chart using Plotly
+        Plotly.newPlot('marketChart', traces, layout, {
+            displayModeBar: true,
+            displaylogo: false,
+            responsive: true
+        });
+}
+
+        function updateChart(timeframe) {
+            // Remove 'active' class from all buttons and add it to the clicked button
+            $('.btn-group .btn').removeClass('active');
+            $(`button:contains('${timeframe}')`).addClass('active');
+
+            // Fetch data for the selected timeframe
+            $.get(`/get_market_indices?timeframe=${timeframe}`, function(data) {
                 if (data.error) {
                     console.error('Error fetching market data:', data.error);
                     return;
                 }
-
-                // Update market summary cards
-                updateMarketSummary(data);
 
                 // Update the chart with the received data
                 updateMarketChart(data);
-            });
-        }
-
-        function updateChart(timeframe = '1M') {
-            $('.time-selector').removeClass('active');
-            $(`button[data-period="${timeframe}"]`).addClass('active');
-
-            $.get('/get_market_indices', function(data) {
-                if (data.error) {
-                    console.error('Error fetching market data:', data.error);
-                    return;
-                }
-
-                // Update market summary cards
-                updateMarketSummary({
-                    'SPY': { name: 'S&P 500', data: data.SPY },
-                    'DIA': { name: 'Dow Jones', data: data.DIA },
-                    'QQQ': { name: 'NASDAQ', data: data.QQQ },
-                    'IWM': { name: 'Russell 2000', data: data.IWM },
-                    'VGK': { name: 'FTSE Europe', data: data.VGK },
-                    'EEM': { name: 'Emerging Markets', data: data.EEM }
-                });
-
-                // Create traces for the chart
-                const traces = Object.entries(data).map(([symbol, indexData]) => ({
-                    name: indexData.name,
-                    x: indexData.dates,
-                    y: indexData.prices,
-                    type: 'scatter',
-                    mode: 'lines',
-                    line: { 
-                        color: indexData.color,
-                        width: 2,
-                        shape: 'spline'
-                    },
-                    hovertemplate: 
-                        `<b>${indexData.name}</b><br>` +
-                        'Date: %{x}<br>' +
-                        'Price: $%{y:.2f}<br>' +
-                        '<extra></extra>'
-                }));
-
-                const layout = {
-                    showlegend: true,
-                    legend: {
-                        orientation: 'h',
-                        y: -0.2,
-                        x: 0.5,
-                        xanchor: 'center',
-                        font: { size: 12 }
-                    },
-                    xaxis: {
-                        showgrid: true,
-                        gridcolor: '#E5E5E5',
-                        gridwidth: 1,
-                        zeroline: false
-                    },
-                    yaxis: {
-                        showgrid: true,
-                        gridcolor: '#E5E5E5',
-                        gridwidth: 1,
-                        zeroline: false,
-                        tickprefix: '$'
-                    },
-                    plot_bgcolor: '#FFFFFF',
-                    paper_bgcolor: '#FFFFFF',
-                    margin: { t: 20, r: 10, b: 60, l: 60 },
-                    hovermode: 'x unified'
-                };
-
-                Plotly.newPlot('marketChart', traces, layout, {
-                    displayModeBar: true,
-                    displaylogo: false,
-                    responsive: true
-                });
             });
         }
 

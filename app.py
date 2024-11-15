@@ -300,6 +300,18 @@ def process_transaction():
 
 @app.route('/get_market_indices')
 def get_market_indices():
+    # Get the 'timeframe' query parameter from the request
+    timeframe = request.args.get('timeframe', '1y')  # Default to 1 year if not specified
+    
+    # Map the accepted timeframes to periods for yfinance
+    periods = {
+        '1M': '1mo',
+        '3M': '3mo',
+        '6M': '6mo',
+        '1Y': '1y'
+    }
+    period = periods.get(timeframe, '1y')  # Default to 1 year if timeframe is invalid
+
     try:
         indices = {
             'SPY': {'name': 'S&P 500', 'color': '#2E86DE'},
@@ -312,7 +324,7 @@ def get_market_indices():
         data = {}
         for symbol, info in indices.items():
             ticker = yf.Ticker(symbol)
-            hist = ticker.history(period="1y")
+            hist = ticker.history(period=period)
             if hist.empty:
                 continue
             data[symbol] = {
