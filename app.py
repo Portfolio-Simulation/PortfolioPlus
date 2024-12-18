@@ -78,7 +78,8 @@ def login():
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        name = request.form.get('name')
+        first_name = request.form.get('first_name')
+        last_name = request.form.get('last_name')
         email = request.form.get('email')
         phone = request.form.get('phone')
         address = request.form.get('address')
@@ -103,9 +104,9 @@ def register():
 
         # If both checks pass, register the user
         cursor.execute(
-            "INSERT INTO users (name, email, phone, address, username, password) "
-            "VALUES (%s, %s, %s, %s, %s, %s)",
-            (name, email, phone, address, username, password)
+            "INSERT INTO users (first_name, last_name, email, phone, address, username, password) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s)",
+            (first_name, last_name, email, phone, address, username, password)
         )
         db.commit()
         flash('Registration successful! You can now log in.', 'success')
@@ -416,7 +417,7 @@ def toggle_watchlist(symbol):
 @app.route('/process_transaction', methods=['POST'])
 def process_transaction():
     data = request.get_json()
-    symbol = data.get('symbol')
+    symbol = data.get('symbol').strip()
     transaction_type = data.get('transaction_type')
     quantity = Decimal(data.get('quantity'))
     amount = Decimal(data.get('amount'))
