@@ -19,7 +19,7 @@ db = mysql.connector.connect(
     database=os.getenv('MYSQL_DB')
 )
 
-# Function to fetch stock data
+# Function to fetch stock data#
 def fetch_stock_data(stock_symbols, watchlist_symbols=None):
     stocks_data = []
     for symbol in stock_symbols:
