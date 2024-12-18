@@ -18,7 +18,11 @@
             margin-top: 0;
             margin-bottom: 2rem;
         }
-        .btn-lg { padding: 15px 30px; }
+        .btn-lg {
+            padding: 8px 16px;
+            font-size: 1rem;
+            margin-bottom: 10px;
+        }
         .card {
             border-radius: 10px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -44,10 +48,10 @@
         .card-header {
             border-radius: 10px 10px 0 0 !important;
             border-bottom: none;
-            padding: 1rem 1.5rem;
+            padding: 0.75rem 1rem;
         }
         .card-body {
-            padding: 1.25rem;
+            padding: 1rem;
         }
         .time-selector {
             background-color: transparent;
@@ -107,8 +111,28 @@
             margin-bottom: 0.5rem;
         }
         .market-movers-list {
-            max-height: 400px;
+            max-height: 300px;
             overflow-y: auto;
+            margin-bottom: 20px;
+            padding-right: 10px;
+        }
+
+        .market-movers-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .market-movers-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+
+        .market-movers-list::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 3px;
+        }
+
+        .market-movers-list::-webkit-scrollbar-thumb:hover {
+            background: #555;
         }
         
         .stock-item {
@@ -219,16 +243,10 @@
                         </h5>
                     </div>
                     <div class="card-body">
-                        <h2 class="text-primary">${{ "{:,.2f}".format(wallet_balance + portfolio_value) }}</h2>
-                        
                         <h6 class="text-muted">Available Balance</h6>
-                        <h3>${{ "{:,.2f}".format(wallet_balance) }}</h3>
-                        
-                        <h6 class="text-muted">Invested Amount</h6>
-                        <h3>${{ "{:,.2f}".format(invested_amount) }}</h3>
-                        
-                        <h6 class="text-muted">Portfolio Value</h6>
-                        <h3>${{ "{:,.2f}".format(portfolio_value) }}</h3>
+                        <h2 class="text-primary">${{ "{:,.2f}".format(wallet_balance + portfolio_value) }}</h2>
+                                                
+    
                     </div>
                 </div>
 
@@ -255,14 +273,14 @@
                     <div class="card-body">
                         <div class="row">
                             <!-- Top Gainers -->
-                            <div class="col-md-6">
+                            <div class="col-md-12">
                                 <h6 class="text-success fw-bold mb-3">Top Gainers</h6>
                                 <div id="topGainers" class="market-movers-list">
                                     <!-- Loading state handled by JavaScript -->
                                 </div>
                             </div>
                             <!-- Top Losers -->
-                            <div class="col-md-6">
+                            <div class="col-md-12">
                                 <h6 class="text-danger fw-bold mb-3">Top Losers</h6>
                                 <div id="topLosers" class="market-movers-list">
                                     <!-- Loading state handled by JavaScript -->
