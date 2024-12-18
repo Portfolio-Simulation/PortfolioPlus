@@ -10,16 +10,44 @@
     <style>
         .navbar-text { font-size: 1.1em; }
         .big-number { font-size: 2.5em; color: #007bff; font-weight: 500; }
-        .market-card { height: 400px; }
+        .market-card { 
+            height: 400px;
+            margin-bottom: 1rem;
+        }
+        .market-indices-container {
+            margin-top: 0;
+            margin-bottom: 2rem;
+        }
         .btn-lg { padding: 15px 30px; }
         .card {
             border-radius: 10px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             border: none;
+            background-color: #ffffff;
+        }
+        .right-sidebar {
+            position: sticky;
+            top: 1rem;
+        }
+        .news-card {
+            margin-top: 1rem;
+            height: calc(100vh - 450px);
+            overflow-y: auto;
+        }
+        .news-item {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #eee;
+        }
+        .news-item:last-child {
+            border-bottom: none;
         }
         .card-header {
             border-radius: 10px 10px 0 0 !important;
             border-bottom: none;
+            padding: 1rem 1.5rem;
+        }
+        .card-body {
+            padding: 1.25rem;
         }
         .time-selector {
             background-color: transparent;
@@ -38,16 +66,102 @@
             color: #2c3e50;
         }
         .market-value {
-            font-size: 2em;
-            font-weight: 500;
+            font-size: 1.75em;
+            font-weight: 600;
             color: #2c3e50;
+            margin-bottom: 0.5rem;
         }
         .market-change {
             font-size: 1.1em;
             font-weight: 500;
+            padding: 0.5rem;
+            border-radius: 4px;
+            display: inline-block;
+            margin-top: 0.5rem;
         }
         #marketChart {
-            height: 450px;
+            height: 380px;
+            width: 100%;
+        }
+        .card {
+            transition: transform 0.2s ease-in-out;
+        }
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .container-fluid {
+            padding: 2rem;
+            background-color: #f8f9fa;
+            min-height: calc(100vh - 56px);
+        }
+        .summary-card {
+            height: 160px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 0.5rem;
+        }
+        .summary-card .text-muted {
+            margin-top: -0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .market-movers-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .stock-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .stock-info {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .stock-symbol {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .stock-name {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .stock-price {
+            text-align: right;
+        }
+        
+        .current-price {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .price-change {
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .price-change.positive {
+            color: #28a745;
+        }
+        
+        .price-change.negative {
+            color: #dc3545;
+        }
+        
+        .no-data {
+            padding: 20px;
+            text-align: center;
+            color: #666;
         }
     </style>
 </head>
@@ -97,23 +211,24 @@
     <div class="container-fluid mt-4">
         <div class="row">
             <!-- Left Column -->
-            <div class="col-md-3">
+            <div class="col-md-3 right-sidebar">
                 <div class="card mb-4">
                     <div class="card-header bg-dark text-white">
-                        <h5 class="mb-0"><i class="fas fa-user-circle"></i> Welcome, {{ username }}!</h5>
+                        <h5 class="mb-0">
+                            <i class="fas fa-user"></i> Welcome, {{ username }}!
+                        </h5>
                     </div>
                     <div class="card-body">
-                        <div class="big-number mb-4">${{ "{:,.2f}".format(wallet_balance) }}</div>
-                        <div class="row">
-                            <div class="col-12 mb-3">
-                                <p class="text-muted mb-1">Available Balance</p>
-                                <h5>${{ "{:,.2f}".format(wallet_balance) }}</h5>
-                            </div>
-                            <div class="col-12">
-                                <p class="text-muted mb-1">Invested Amount</p>
-                                <h5>$0.00</h5>
-                            </div>
-                        </div>
+                        <h2 class="text-primary">${{ "{:,.2f}".format(wallet_balance + portfolio_value) }}</h2>
+                        
+                        <h6 class="text-muted">Available Balance</h6>
+                        <h3>${{ "{:,.2f}".format(wallet_balance) }}</h3>
+                        
+                        <h6 class="text-muted">Invested Amount</h6>
+                        <h3>${{ "{:,.2f}".format(invested_amount) }}</h3>
+                        
+                        <h6 class="text-muted">Portfolio Value</h6>
+                        <h3>${{ "{:,.2f}".format(portfolio_value) }}</h3>
                     </div>
                 </div>
 
@@ -128,6 +243,32 @@
                         <a href="/portfolio" class="btn btn-success btn-lg btn-block">
                             <i class="fas fa-briefcase"></i> View Portfolio
                         </a>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-line"></i> Market Movers
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <!-- Top Gainers -->
+                            <div class="col-md-6">
+                                <h6 class="text-success fw-bold mb-3">Top Gainers</h6>
+                                <div id="topGainers" class="market-movers-list">
+                                    <!-- Loading state handled by JavaScript -->
+                                </div>
+                            </div>
+                            <!-- Top Losers -->
+                            <div class="col-md-6">
+                                <h6 class="text-danger fw-bold mb-3">Top Losers</h6>
+                                <div id="topLosers" class="market-movers-list">
+                                    <!-- Loading state handled by JavaScript -->
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -155,18 +296,20 @@
                     </div>
 
                     <!-- Market Summary Cards -->
-                    <div class="row mt-4">
-                        {% for index in ['S&P 500', 'Dow Jones', 'NASDAQ', 'Russell 2000', 'FTSE Europe', 'Emerging Markets'] %}
-                        <div class="col-md-4 mb-3">
-                            <div class="card h-100">
-                                <div class="card-body text-center">
-                                    <h6 class="text-muted mb-3">{{ index }}</h6>
-                                    <div class="market-value" id="{{ index.lower().replace(' ', '').replace('&', '') }}Price">--</div>
-                                    <div class="market-change" id="{{ index.lower().replace(' ', '').replace('&', '') }}Change">--</div>
+                    <div class="market-indices-container">
+                        <div class="row">
+                            {% for index in ['S&P 500', 'Dow Jones', 'NASDAQ', 'Russell 2000', 'FTSE Europe', 'Emerging Markets'] %}
+                            <div class="col-md-4 mb-4">
+                                <div class="card summary-card">
+                                    <div class="card-body text-center">
+                                        <h6 class="text-muted mb-3 font-weight-bold">{{ index }}</h6>
+                                        <div class="market-value" id="{{ index.lower().replace(' ', '').replace('&', '') }}Price">--</div>
+                                        <div class="market-change mt-2" id="{{ index.lower().replace(' ', '').replace('&', '') }}Change">--</div>
+                                    </div>
                                 </div>
                             </div>
+                            {% endfor %}
                         </div>
-                        {% endfor %}
                     </div>
                 </div>
             </div>
@@ -184,71 +327,98 @@
         });
 
         function updateMarketData() {
-        $.get('/get_market_indices', function(data) {
-            if (data.error) {
-                console.error('Error fetching market data:', data.error);
-                return;
-            }
+            $.get('/get_market_indices', function(data) {
+                if (data.error) {
+                    console.error('Error fetching market data:', data.error);
+                    return;
+                }
 
-        // Update the chart with the received data
-        updateMarketChart(data);
-    });
-}
-    function updateMarketChart(data) {
-        const traces = Object.keys(data).map(symbol => ({
-            name: data[symbol].name,
-            x: data[symbol].dates,
-            y: data[symbol].prices,
-            type: 'scatter',
-            mode: 'lines',
-            line: { 
-                color: data[symbol].color,
-                width: 2,
-                shape: 'spline'
-            },
-            hovertemplate: 
-                `<b>${data[symbol].name}</b><br>` +
-                'Date: %{x}<br>' +
-                'Price: $%{y:.2f}<br>' +
-                '<extra></extra>'
-        }));
+                // Update both the chart and market summary
+                updateMarketChart(data);
+                updateMarketSummary(data);
+            });
+        }
 
-        const layout = {
-            title: 'Market Indices',
-            showlegend: true,
-            legend: {
-                orientation: 'h',
-                y: -0.2,
-                x: 0.5,
-                xanchor: 'center',
-                font: { size: 12 }
-            },
-            xaxis: {
-                showgrid: true,
-                gridcolor: '#E5E5E5',
-                gridwidth: 1,
-                zeroline: false
-            },
-            yaxis: {
-                showgrid: true,
-                gridcolor: '#E5E5E5',
-                gridwidth: 1,
-                zeroline: false,
-                tickprefix: '$'
-            },
-            plot_bgcolor: '#FFFFFF',
-            paper_bgcolor: '#FFFFFF',
-            margin: { t: 20, r: 10, b: 60, l: 60 },
-            hovermode: 'x unified'
-        };
+        function updateMarketChart(data) {
+            const traces = Object.keys(data).map(symbol => ({
+                name: data[symbol].name,
+                x: data[symbol].dates,
+                y: data[symbol].prices,
+                type: 'scatter',
+                mode: 'lines',
+                line: { 
+                    color: data[symbol].color,
+                    width: 2,
+                    shape: 'spline'
+                },
+                hovertemplate: 
+                    `<b>${data[symbol].name}</b><br>` +
+                    'Date: %{x}<br>' +
+                    'Price: $%{y:.2f}<br>' +
+                    '<extra></extra>'
+            }));
 
-        // Render the chart using Plotly
-        Plotly.newPlot('marketChart', traces, layout, {
-            displayModeBar: true,
-            displaylogo: false,
-            responsive: true
-        });
-}
+            const layout = {
+                title: {
+                    text: 'Market Indices',
+                    font: {
+                        size: 20,
+                        color: '#2c3e50'
+                    },
+                    y: 0.98
+                },
+                showlegend: true,
+                legend: {
+                    orientation: 'h',
+                    y: -0.2,
+                    x: 0.5,
+                    xanchor: 'center',
+                    font: { size: 12 }
+                },
+                xaxis: {
+                    showgrid: true,
+                    gridcolor: '#E5E5E5',
+                    gridwidth: 1,
+                    zeroline: false,
+                    tickfont: { size: 11 },
+                    title: {
+                        text: 'Date',
+                        font: {
+                            size: 12,
+                            color: '#2c3e50'
+                        },
+                        standoff: 10
+                    }
+                },
+                yaxis: {
+                    showgrid: true,
+                    gridcolor: '#E5E5E5',
+                    gridwidth: 1,
+                    zeroline: false,
+                    tickprefix: '$',
+                    tickfont: { size: 11 },
+                    title: {
+                        text: 'Price (USD)',
+                        font: {
+                            size: 12,
+                            color: '#2c3e50'
+                        },
+                        standoff: 15
+                    }
+                },
+                plot_bgcolor: '#FFFFFF',
+                paper_bgcolor: '#FFFFFF',
+                margin: { t: 30, r: 30, b: 60, l: 80 },
+                hovermode: 'x unified'
+            };
+
+            // Render the chart using Plotly
+            Plotly.newPlot('marketChart', traces, layout, {
+                displayModeBar: true,
+                displaylogo: false,
+                responsive: true
+            });
+        }
 
         function updateChart(timeframe) {
             // Remove 'active' class from all buttons and add it to the clicked button
@@ -268,42 +438,58 @@
         }
 
         function updateMarketSummary(data) {
-            if (data.SPY) {
-                $('#sp500Price').text('$' + data.SPY.current_price);
-                updateChangeDisplay('sp500Change', data.SPY.change, data.SPY.change_percent);
-            }
-            if (data.DIA) {
-                $('#dowjonesPrice').text('$' + data.DIA.current_price);
-                updateChangeDisplay('dowjonesChange', data.DIA.change, data.DIA.change_percent);
-            }
-            if (data.QQQ) {
-                $('#nasdaqPrice').text('$' + data.QQQ.current_price);
-                updateChangeDisplay('nasdaqChange', data.QQQ.change, data.QQQ.change_percent);
-            }
-            if (data.IWM) {
-                $('#russell2000Price').text('$' + data.IWM.current_price);
-                updateChangeDisplay('russell2000Change', data.IWM.change, data.IWM.change_percent);
-            }
-            if (data.VGK) {
-                $('#ftseeuropePrice').text('$' + data.VGK.current_price);
-                updateChangeDisplay('ftseeuropeChange', data.VGK.change, data.VGK.change_percent);
-            }
-            if (data.EEM) {
-                $('#emergingmarketsPrice').text('$' + data.EEM.current_price);
-                updateChangeDisplay('emergingmarketsChange', data.EEM.change, data.EEM.change_percent);
-            }
+            // Map of index symbols to their display IDs
+            const indexMap = {
+                'SPY': 'sp500',
+                'DIA': 'dowjones',
+                'QQQ': 'nasdaq',
+                'IWM': 'russell2000',
+                'VGK': 'ftseeurope',
+                'EEM': 'emergingmarkets'
+            };
 
-    // Repeat for other indices
+            // Update each market summary card
+            Object.entries(data).forEach(([symbol, indexData]) => {
+                const elementId = indexMap[symbol];
+                if (elementId) {
+                    // Update price
+                    $(`#${elementId}Price`).text('$' + indexData.current_price.toFixed(2));
+                    
+                    // Update change
+                    const changeElement = $(`#${elementId}Change`);
+                    const isPositive = indexData.change >= 0;
+                    const sign = isPositive ? '+' : '';
+                    const changeText = `${sign}$${indexData.change.toFixed(2)} (${sign}${indexData.change_percent.toFixed(2)}%)`;
+                    
+                    changeElement.text(changeText);
+                    changeElement.removeClass('text-success text-danger');
+                    changeElement.addClass(isPositive ? 'text-success' : 'text-danger');
+                }
+            });
         }
 
-
-        function updateChangeDisplay(elementId, change, changePercent) {
-            const element = $(`#${elementId}`);
-            const isPositive = change >= 0;
-            const sign = isPositive ? '+' : '';
-            element.text(`${sign}$${change.toFixed(2)} (${sign}${changePercent.toFixed(2)}%)`);
-            element.removeClass('text-success text-danger');
-            element.addClass(isPositive ? 'text-success' : 'text-danger');
+        function updateMarketNews() {
+            $.get('/get_market_news', function(data) {
+                const newsContainer = $('#marketNews');
+                newsContainer.empty();
+                
+                data.forEach(article => {
+                    const newsItem = `
+                        <div class="news-item px-3">
+                            <h6 class="mb-1">
+                                <a href="${article.url}" target="_blank" class="text-dark">
+                                    ${article.title}
+                                </a>
+                            </h6>
+                            <p class="small text-muted mb-1">
+                                ${new Date(article.publishedAt).toLocaleString()}
+                            </p>
+                            <p class="small mb-0">${article.description}</p>
+                        </div>
+                    `;
+                    newsContainer.append(newsItem);
+                });
+            });
         }
 
         // Initialize when document is ready
@@ -311,6 +497,57 @@
         updateMarketData();
         // Refresh data every 5 minutes
         setInterval(updateMarketData, 300000);
+        setInterval(updateMarketNews, 300000); // Update every 5 minutes
+    });
+
+    function updateMarketMovers() {
+        fetch('/get_market_movers')
+            .then(response => response.json())
+            .then(data => {
+                // Update gainers
+                const gainersHtml = data.gainers.length ? data.gainers.map(stock => `
+                    <div class="stock-item">
+                        <div class="stock-info">
+                            <span class="stock-symbol">${stock.symbol}</span>
+                            <span class="stock-name">${stock.name}</span>
+                        </div>
+                        <div class="stock-price">
+                            <div class="current-price">$${stock.price.toFixed(2)}</div>
+                            <div class="price-change positive">+${stock.change.toFixed(2)}%</div>
+                        </div>
+                    </div>
+                `).join('') : '<div class="no-data">No gainers data available</div>';
+                
+                document.getElementById('topGainers').innerHTML = gainersHtml;
+
+                // Update losers
+                const losersHtml = data.losers.length ? data.losers.map(stock => `
+                    <div class="stock-item">
+                        <div class="stock-info">
+                            <span class="stock-symbol">${stock.symbol}</span>
+                            <span class="stock-name">${stock.name}</span>
+                        </div>
+                        <div class="stock-price">
+                            <div class="current-price">$${stock.price.toFixed(2)}</div>
+                            <div class="price-change negative">${stock.change.toFixed(2)}%</div>
+                        </div>
+                    </div>
+                `).join('') : '<div class="no-data">No losers data available</div>';
+                
+                document.getElementById('topLosers').innerHTML = losersHtml;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                const errorHtml = '<div class="no-data">Error loading market data</div>';
+                document.getElementById('topGainers').innerHTML = errorHtml;
+                document.getElementById('topLosers').innerHTML = errorHtml;
+            });
+    }
+
+    // Initial load and set up auto-refresh
+    document.addEventListener('DOMContentLoaded', () => {
+        updateMarketMovers();
+        setInterval(updateMarketMovers, 60000); // Update every minute
     });
     </script>
 </body>

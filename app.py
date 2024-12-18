@@ -124,8 +124,81 @@ def dashboard():
     wallet_balance = cursor.fetchone()[0]
 
     username = session.get('user')
-    return render_template('dashboard.html', username=username, wallet_balance=wallet_balance)
+    return render_template('dashboard.html', username=username, wallet_balance=wallet_balance,invested_amount=0,portfolio_value=0)
 
+def get_all_stocks():
+    return [
+        # Technology (5 stocks)
+        'AAPL',   # Apple
+        'MSFT',   # Microsoft
+        'GOOGL',  # Alphabet
+        'META',   # Meta
+        'NVDA',   # NVIDIA
+        
+        # Financial (3 stocks)
+        'JPM',    # JPMorgan Chase
+        'V',      # Visa
+        'BAC',    # Bank of America
+        
+        # Consumer & Retail (3 stocks)
+        'AMZN',   # Amazon
+        'WMT',    # Walmart
+        'TSLA',   # Tesla
+        
+        # Healthcare & Others (4 stocks)
+        'JNJ',    # Johnson & Johnson
+        'UNH',    # UnitedHealth
+        'DIS',    # Disney
+        'NFLX',   # Netflix
+    ]
+ 
+
+@app.route('/get_market_movers')
+def get_market_movers():
+    try:
+        symbols = get_all_stocks()
+        gainers = []
+        losers = []
+        
+        for symbol in symbols:
+            try:
+                ticker = yf.Ticker(symbol)
+                hist = ticker.history(period="5d")
+                if hist.empty or len(hist) < 2:
+                    continue
+                info = ticker.info
+                current_price = hist['Close'][-1]
+                prev_close = hist['Close'][-2]
+                
+                # Ensure valid data is retrieved
+                if current_price is not None and prev_close is not None and prev_close > 0:
+                    change_pct = ((current_price - prev_close) / prev_close) * 100
+                    stock_data = {
+                        'symbol': symbol,
+                        'name': info.get('shortName', symbol),
+                        'price': round(current_price, 2),
+                        'change': round(change_pct, 2)
+                    }
+                    
+                    if change_pct > 0:
+                        gainers.append(stock_data)
+                    elif change_pct < 0:
+                        losers.append(stock_data)
+            except Exception as e:
+                print(f"Error processing {symbol}: {str(e)}")
+                continue
+        
+        # Sort and get top 5 gainers and losers
+        gainers = sorted(gainers, key=lambda x: x['change'], reverse=True)[:5]
+        losers = sorted(losers, key=lambda x: x['change'])[:5]
+        
+        return jsonify({
+            'gainers': gainers,
+            'losers': losers
+        })
+    except Exception as e:
+        print(f"Error in get_market_movers: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/logout')
 def logout():
@@ -170,21 +243,145 @@ def get_stock_history(symbol):
         print(f"Error fetching data for {symbol}: {str(e)}")
         return jsonify({'error': 'Failed to fetch stock data'}), 500
 
+# @app.route('/portfolio')
+# def portfolio():
+#     if 'user_id' not in session:
+#         flash('Please log in to view your portfolio.', 'danger')
+#         return redirect(url_for('home'))
+
+#     user_id = session['user_id']
+#     cursor = db.cursor()
+#     cursor.execute("SELECT stock_symbol, company_name, quantity, sector FROM portfolios WHERE user_id = %s", (user_id,))
+#     stocks = cursor.fetchall()
+#     cursor.execute("SELECT wallet_balance FROM users WHERE user_id = %s", (user_id,))
+#     wallet_balance = cursor.fetchone()[0]
+
+#     stock_list = [{'symbol': stock[0], 'company_name': stock[1], 'quantity': stock[2], 'sector': stock[3]} for stock in stocks]
+#     return render_template('portfolio.html', stocks=stock_list, wallet_balance=wallet_balance)
+
 @app.route('/portfolio')
 def portfolio():
     if 'user_id' not in session:
         flash('Please log in to view your portfolio.', 'danger')
         return redirect(url_for('home'))
-
+ 
     user_id = session['user_id']
-    cursor = db.cursor()
-    cursor.execute("SELECT stock_symbol, company_name, quantity, sector FROM portfolios WHERE user_id = %s", (user_id,))
-    stocks = cursor.fetchall()
-    cursor.execute("SELECT wallet_balance FROM users WHERE user_id = %s", (user_id,))
-    wallet_balance = cursor.fetchone()[0]
+    cursor = db.cursor(dictionary=True)
+    
+    # Modified query to explicitly select all needed fields
+    cursor.execute("""
+        SELECT
+            p.stock_symbol,
+            p.company_name,
+            p.quantity,
+            p.sector,
+            (SELECT wallet_balance FROM users WHERE user_id = %s) as wallet_balance
+        FROM Portfolios p
+        WHERE p.user_id = %s
+    """, (user_id, user_id))
+    
+    portfolio_data = cursor.fetchall()
+    
+    # Get wallet balance even if portfolio is empty
+    if not portfolio_data:
+        cursor.execute("SELECT wallet_balance FROM users WHERE user_id = %s", (user_id,))
+        wallet_balance = cursor.fetchone()['wallet_balance']
+    else:
+        wallet_balance = portfolio_data[0]['wallet_balance']
+ 
+    # Update current prices and calculate totals
+    total_value = 0
+    for stock in portfolio_data:
+        try:
+            ticker = yf.Ticker(stock['stock_symbol'])
+            info = ticker.info
+            current_price = info.get('regularMarketPrice', 0)
+            stock['current_price'] = current_price
+            stock['total_value'] = current_price * stock['quantity']
+            total_value += stock['total_value']
+            
+            # Update company name and sector if they're missing
+            if not stock['company_name'] or stock['company_name'] == 'None':
+                stock['company_name'] = info.get('longName') or info.get('shortName') or stock['stock_symbol']
+                stock['sector'] = info.get('sector') or 'Technology'
+                
+                # Update the database with correct information
+                cursor.execute("""
+                    UPDATE Portfolios
+                    SET company_name = %s, sector = %s
+                    WHERE user_id = %s AND stock_symbol = %s
+                """, (stock['company_name'], stock['sector'], user_id, stock['stock_symbol']))
+                db.commit()
+                
+        except Exception as e:
+            print(f"Error getting price for {stock['stock_symbol']}: {str(e)}")
+            stock['current_price'] = 0
+            stock['total_value'] = 0
+ 
+    return render_template('portfolio.html',
+                         stocks=portfolio_data,
+                         wallet_balance=wallet_balance,
+                         total_value=total_value)
 
-    stock_list = [{'symbol': stock[0], 'company_name': stock[1], 'quantity': stock[2], 'sector': stock[3]} for stock in stocks]
-    return render_template('portfolio.html', stocks=stock_list, wallet_balance=wallet_balance)
+@app.route('/get_portfolio_analytics')
+def get_portfolio_analytics():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Not logged in'}), 401
+        
+    try:
+        user_id = session['user_id']
+        cursor = db.cursor(dictionary=True)
+        
+        # Get user's portfolio
+        cursor.execute("""
+            SELECT stock_symbol, quantity, sector
+            FROM portfolios
+            WHERE user_id = %s
+        """, (user_id,))
+        portfolio = cursor.fetchall()
+        
+        # Calculate sector distribution
+        sector_distribution = {}
+        total_value = 0
+        
+        for stock in portfolio:
+            ticker = yf.Ticker(stock['stock_symbol'])
+            current_price = ticker.info.get('regularMarketPrice', 0)
+            stock_value = current_price * stock['quantity']
+            total_value += stock_value
+            
+            sector = stock['sector']
+            if sector in sector_distribution:
+                sector_distribution[sector] += stock_value
+            else:
+                sector_distribution[sector] = stock_value
+        
+        # Convert to percentages
+        for sector in sector_distribution:
+            sector_distribution[sector] = round((sector_distribution[sector] / total_value) * 100, 2)
+        
+        # Calculate basic risk metrics
+        risk_analysis = {
+            'total_value': round(total_value, 2),
+            'num_stocks': len(portfolio),
+            'diversification_score': min(100, len(portfolio) * 10)  # Simple diversification metric
+        }
+        
+        # Calculate performance
+        performance = {
+            'daily_change': 0,
+            'weekly_change': 0,
+            'monthly_change': 0
+        }
+        
+        return jsonify({
+            'sector_distribution': sector_distribution,
+            'risk_analysis': risk_analysis,
+            'performance': performance
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/watchlist')
 def watchlist():
@@ -340,6 +537,8 @@ def get_market_indices():
     except Exception as e:
         print(f"Error fetching market data: {str(e)}")
         return jsonify({'error': 'Failed to fetch market data'}), 500
+
+
 
 @app.route('/check_username', methods=['POST'])
 def check_username():

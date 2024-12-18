@@ -50,12 +50,12 @@
             </ul>
         </div>
     </nav>
-
+ 
     <div class="container mt-5">
         <div class="portfolio-header">My Stock Portfolio</div>
         <!-- Conditionally render the table or no-stocks message -->
         {% if stocks and stocks|length > 0 %}
-            <table class="table table-striped mt-4">
+            <table class="table">
                 <thead class="thead-dark">
                     <tr>
                         <th>Stock Symbol</th>
@@ -67,7 +67,7 @@
                 <tbody>
                     {% for stock in stocks %}
                     <tr>
-                        <td>{{ stock.symbol }}</td>
+                        <td>{{ stock.stock_symbol }}</td>
                         <td>{{ stock.company_name }}</td>
                         <td>{{ stock.quantity }}</td>
                         <td>{{ stock.sector }}</td>
@@ -79,8 +79,9 @@
             <div class="no-stocks-message">You currently have no stocks in your portfolio.</div>
         {% endif %}
     </div>
-
+ 
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+ 
