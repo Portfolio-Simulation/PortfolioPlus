@@ -135,23 +135,41 @@
             let currentPrice = 0;
 
             $('.btn-success, .btn-danger').click(function() {
-                const symbol = $(this).closest('tr').find('.stock-symbol').text();
+                const symbol = $(this).data('symbol');
                 const transactionType = $(this).hasClass('btn-success') ? 'buy' : 'sell';
 
                 $('#stockSymbol').val(symbol);
                 $('#transactionType').val(transactionType);
                 $('#stockQuantity').val(1);
-                $('#totalAmount').val('');
+                
+                // Clear any previous messages
+                $('#errorMessage').addClass('d-none');
+                $('#successMessage').addClass('d-none');
+
+                // Fetch current price for the stock
+                $.ajax({
+                    url: `/get_stock_price/${symbol}`,
+                    method: 'GET',
+                    success: function(response) {
+                        currentPrice = parseFloat(response.price);
+                        // Update initial amount based on quantity of 1
+                        $('#totalAmount').val(currentPrice.toFixed(2));
+                    },
+                    error: function() {
+                        $('#errorMessage').text('Error fetching stock price').removeClass('d-none');
+                    }
+                });
+
                 $('#buySellModal').modal('show');
             });
 
             $('#stockQuantity').on('input', function() {
                 const quantity = parseFloat($(this).val());
-                if (!isNaN(quantity) && currentPrice > 0) {
+                if (!isNaN(quantity)) {
                     $('#totalAmount').val((quantity * currentPrice).toFixed(2));
                 }
             });
-
+ 
             $('#totalAmount').on('input', function() {
                 const amount = parseFloat($(this).val());
                 if (!isNaN(amount) && currentPrice > 0) {
@@ -175,7 +193,12 @@
                     url: `/process_transaction`,
                     method: 'POST',
                     contentType: 'application/json',
-                    data: JSON.stringify({ symbol: symbol, transaction_type: transactionType, quantity: quantity, amount: amount }),
+                    data: JSON.stringify({ 
+                        symbol: symbol, 
+                        transaction_type: transactionType, 
+                        quantity: quantity, 
+                        amount: amount 
+                    }),
                     success: function(response) {
                         if (response.error) {
                             $('#errorMessage').text(response.error).removeClass('d-none');

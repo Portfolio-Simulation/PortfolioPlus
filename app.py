@@ -568,6 +568,22 @@ def check_email():
     else:   
         return jsonify({'available': True})
 
+@app.route('/get_stock_price/<symbol>')
+def get_stock_price(symbol):
+    try:
+        ticker = yf.Ticker(symbol)
+        hist = ticker.history(period="5d")
+        current_price = hist['Close'][-1]
+        
+        if current_price is None:
+            return jsonify({'error': 'Price not available'}), 404
+            
+        return jsonify({
+            'price': current_price
+        })
+    except Exception as e:
+        print(f"Error fetching price for {symbol}: {str(e)}")
+        return jsonify({'error': 'Failed to fetch stock price'}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5001)
+    app.run(debug=True, port=5002)
