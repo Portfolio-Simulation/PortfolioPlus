@@ -4,114 +4,229 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portfolio+ | Login</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
         body {
-            font-family: 'Roboto', sans-serif;
-            background: linear-gradient(to right, #141e30, #243b55);
-            color: #ffffff;
-            min-height: 100vh;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            height: 100vh;
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
-            margin: 0;
+            position: relative;
+            overflow: hidden;
         }
-        .login-container {
-            max-width: 450px;
-            width: 100%;
-            background: rgba(255, 255, 255, 0.15);
-            border-radius: 20px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-            padding: 30px;
-            backdrop-filter: blur(15px);
-        }
-        .login-container .card-header {
-            background: transparent;
-            border: none;
-        }
-        .login-container .card-body {
-            padding-top: 10px;
-        }
-        .form-control {
-            background: rgba(255, 255, 255, 0.1);
-            color: #000;
-            border: 2px solid #4e54c8;
-        }
-        .form-control:focus {
-            box-shadow: none;
-            border-color: #4e54c8;
-            background: rgba(255, 255, 255, 0.3);
-        }
-        .btn-primary {
-            background: #6a11cb;
-            border: none;
-            width: 100%;
-            transition: background 0.3s ease;
-        }
-        .btn-primary:hover {
-            background: #4e5d78;
-        }
-        a {
-            color: #d1d1d1;
-        }
-        .navbar-brand {
-            font-weight: bold;
-            font-size: 1.5rem;
-            color: #ffffff !important;
-        }
-        .navbar {
-            width: 100%;
+
+        /* Abstract background pattern */
+        body::before {
+            content: '';
             position: absolute;
             top: 0;
             left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, rgba(66, 153, 225, 0.05) 25%, transparent 25%),
+                        linear-gradient(-45deg, rgba(66, 153, 225, 0.05) 25%, transparent 25%),
+                        linear-gradient(45deg, transparent 75%, rgba(66, 153, 225, 0.05) 75%),
+                        linear-gradient(-45deg, transparent 75%, rgba(66, 153, 225, 0.05) 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+            z-index: 0;
         }
-        .form-label {
-            color: #000;
+
+        .login-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 420px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .logo-container {
             text-align: center;
-            font-size: 1.2rem;
+            margin-bottom: 2rem;
+        }
+
+        .logo {
+            font-size: 2.5rem;
+            color: #2d3748;
+            margin-bottom: 0.5rem;
+        }
+
+        .logo i {
+            color: #4299e1;
+            margin-right: 0.5rem;
+        }
+
+        .form-control {
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 0.75rem 1rem 0.75rem 2.75rem;
+            height: 48px;
+            width: 100%;
+            background-color: #fff;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 1rem;
+        }
+
+        .input-group i {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #a0aec0;
+            z-index: 2;
+        }
+
+        .form-control:focus {
+            border-color: #4299e1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
+        }
+
+        .form-label {
+            color: #4a5568;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .btn-login {
+            background: linear-gradient(to right, #4299e1, #3182ce);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            padding: 0.875rem;
+            width: 100%;
+            font-weight: 600;
+            margin-top: 1rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(66, 153, 225, 0.25);
+        }
+
+        .register-link {
+            text-align: center;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .register-link a {
+            color: #4299e1;
+            font-weight: 600;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .register-link a:hover {
+            color: #3182ce;
+        }
+
+        /* Adjust placeholder alignment */
+        .form-control::placeholder {
+            text-align: left;
+        }
+
+        /* Alert styling */
+        .alert {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            min-width: 300px;
+            z-index: 1000;
+            border-radius: 8px;
+            padding: 1rem;
+            background-color: #fff;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .alert-success {
+            border-left: 4px solid #28a745;
+        }
+
+        .alert-danger {
+            border-left: 4px solid #dc3545;
+        }
+
+        .alert-info {
+            border-left: 4px solid #17a2b8;
+        }
+
+        .alert-warning {
+            border-left: 4px solid #ffc107;
+        }
+
+        .alert-dismissible {
+            padding-right: 4rem;
+        }
+
+        .alert-dismissible .close {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            color: #000;
+            opacity: 0.5;
+        }
+
+        .alert-dismissible .close:hover {
+            opacity: 1;
         }
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand mx-auto" href="#">Portfolio+</a>
+    <div class="login-container">
+        <div class="logo-container">
+            <h1 class="logo">
+                <i class="fas fa-chart-line"></i>
+                Portfolio+
+            </h1>
         </div>
-    </nav>
-    <div class="container login-container mt-5">
-        
-        <div class="card">
-            <div class="card-header text-center">
-                <h4 style="color: #000;">Login to Your Account</h4>
-            </div>
-            <div class="card-body">
-                {% with messages = get_flashed_messages(with_categories=true) %}
-                    {% if messages %}
-                        {% for category, message in messages %}
-                            <div class="alert alert-{{ category }}">{{ message }}</div>
-                        {% endfor %}
-                    {% endif %}
-                {% endwith %}
-                <form method="POST" action="/login">
-                    <div class="form-group mb-3">
-                        <label for="username" class="form-label">Username</label>
-                        <input type="text" class="form-control" id="username" name="username" required>
-                    </div>
-                    <div class="form-group mb-4">
-                        <label for="password" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="password" name="password" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Login</button>
-                </form>
-                <div class="text-center mt-3">
-                    <a href="/register" style="color: #000;" >Don't have an account? Register here</a>
+
+        <form action="{{ url_for('login') }}" method="post">
+            <div class="form-group">
+                <label class="form-label">Username</label>
+                <div class="input-group">
+                    <i class="fas fa-user"></i>
+                    <input type="text" name="username" class="form-control" required>
                 </div>
             </div>
+
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <div class="input-group">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" name="password" class="form-control" required>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-login">Sign In</button>
+        </form>
+
+        <div class="register-link">
+            <p>Don't have an account? <a href="{{ url_for('register') }}">Register here</a></p>
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="close" data-dismiss="alert">
+                        <span>&times;</span>
+                    </button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
 </body>
 </html>
