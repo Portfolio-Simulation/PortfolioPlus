@@ -128,28 +128,21 @@ def dashboard():
 
 def get_all_stocks():
     return [
-        # Technology (5 stocks)
-        'AAPL',   # Apple
-        'MSFT',   # Microsoft
         'GOOGL',  # Alphabet
-        'META',   # Meta
-        'NVDA',   # NVIDIA
-        
-        # Financial (3 stocks)
-        'JPM',    # JPMorgan Chase
-        'V',      # Visa
-        'BAC',    # Bank of America
-        
-        # Consumer & Retail (3 stocks)
+        'AAPL',   # Apple
         'AMZN',   # Amazon
-        'WMT',    # Walmart
-        'TSLA',   # Tesla
-        
-        # Healthcare & Others (4 stocks)
-        'JNJ',    # Johnson & Johnson
-        'UNH',    # UnitedHealth
+        'BAC',    # Bank of America
         'DIS',    # Disney
+        'JNJ',    # Johnson & Johnson
+        'JPM',    # JPMorgan Chase
+        'META',   # Meta
+        'MSFT',   # Microsoft
         'NFLX',   # Netflix
+        'NVDA',   # NVIDIA
+        'TSLA',   # Tesla
+        'UNH',    # UnitedHealth
+        'V',      # Visa
+        'WMT',    # Walmart
     ]
  
 
@@ -213,7 +206,7 @@ def stocks():
         return redirect(url_for('home'))
 
     user_id = session['user_id']
-    stock_symbols = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA']
+    stock_symbols = get_all_stocks()
 
     cursor = db.cursor()
     cursor.execute("SELECT stock_symbol FROM watchlist WHERE user_id = %s", (user_id,))
