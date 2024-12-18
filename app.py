@@ -63,12 +63,13 @@ def login():
     password = request.form.get('password')
 
     cursor = db.cursor()
-    cursor.execute("SELECT user_id, username FROM users WHERE username = %s AND password = %s", (username, password))
+    cursor.execute("SELECT user_id, username,first_name FROM users WHERE username = %s AND password = %s", (username, password))
     user = cursor.fetchone()
 
     if user:
         session['user'] = user[1]
         session['user_id'] = user[0]
+        session['first_name'] = user[2]
         flash(f'Welcome, {username}!', 'success')
         return redirect(url_for('dashboard'))
     else:
@@ -125,7 +126,8 @@ def dashboard():
     wallet_balance = cursor.fetchone()[0]
 
     username = session.get('user')
-    return render_template('dashboard.html', username=username, wallet_balance=wallet_balance,invested_amount=0,portfolio_value=0)
+    first_name = session.get('first_name')
+    return render_template('dashboard.html', username=username, wallet_balance=wallet_balance,first_name=first_name)
 
 def get_all_stocks():
     return [
