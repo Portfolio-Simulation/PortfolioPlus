@@ -2,12 +2,20 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 import psycopg2
 import psycopg2.extras
 import os
+import requests as http_requests
 from dotenv import load_dotenv
 import yfinance as yf
 from decimal import Decimal
 
 # Load environment variables from .env
 load_dotenv()
+
+# Create a requests session with browser headers for yfinance
+# This avoids Yahoo Finance blocking cloud/datacenter IPs
+yf_session = http_requests.Session()
+yf_session.headers.update({
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+})
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'your_secret_key')
@@ -108,7 +116,7 @@ def fetch_stock_data(stock_symbols, watchlist_symbols=None):
     stocks_data = []
     for symbol in stock_symbols:
         try:
-            ticker = yf.Ticker(symbol)
+            ticker = yf.Ticker(symbol, session=yf_session)
             hist = ticker.history(period="5d")
             if hist.empty or len(hist) < 2:
                 continue
@@ -242,7 +250,7 @@ def get_market_movers():
         
         for symbol in symbols:
             try:
-                ticker = yf.Ticker(symbol)
+                ticker = yf.Ticker(symbol, session=yf_session)
                 hist = ticker.history(period="5d")
                 if hist.empty or len(hist) < 2:
                     continue
@@ -307,7 +315,7 @@ def stocks():
 @app.route('/get_stock_history/<symbol>')
 def get_stock_history(symbol):
     try:
-        ticker = yf.Ticker(symbol)
+        ticker = yf.Ticker(symbol, session=yf_session)
         history = ticker.history(period="1y")
         if history.empty:
             return jsonify({'error': 'No data available'}), 404
@@ -373,7 +381,7 @@ def portfolio():
     total_value = 0
     for stock in portfolio_data:
         try:
-            ticker = yf.Ticker(stock['stock_symbol'])
+            ticker = yf.Ticker(stock['stock_symbol'], session=yf_session)
             info = ticker.info
             current_price = info.get('regularMarketPrice', 0)
             stock['current_price'] = current_price
@@ -425,7 +433,7 @@ def get_portfolio_analytics():
         total_value = 0
         
         for stock in portfolio:
-            ticker = yf.Ticker(stock['stock_symbol'])
+            ticker = yf.Ticker(stock['stock_symbol'], session=yf_session)
             current_price = ticker.info.get('regularMarketPrice', 0)
             stock_value = current_price * stock['quantity']
             total_value += stock_value
@@ -614,7 +622,7 @@ def get_market_indices():
         }
         data = {}
         for symbol, info in indices.items():
-            ticker = yf.Ticker(symbol)
+            ticker = yf.Ticker(symbol, session=yf_session)
             hist = ticker.history(period=period)
             if hist.empty:
                 continue
@@ -672,7 +680,7 @@ def check_email():
 @app.route('/get_stock_price/<symbol>')
 def get_stock_price(symbol):
     try:
-        ticker = yf.Ticker(symbol)
+        ticker = yf.Ticker(symbol, session=yf_session)
         hist = ticker.history(period="5d")
         current_price = hist['Close'][-1]
         
