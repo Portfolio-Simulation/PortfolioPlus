@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
-import mysql.connector
+import psycopg2
+import psycopg2.extras
 import os
 from dotenv import load_dotenv
 import yfinance as yf
@@ -9,15 +10,98 @@ from decimal import Decimal
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'  # Replace with a secure random key
+app.secret_key = os.getenv('SECRET_KEY', 'your_secret_key')
 
-# MySQL connection setup
-db = mysql.connector.connect(
-    host=os.getenv('MYSQL_HOST'),
-    user=os.getenv('MYSQL_USER'),
-    password=os.getenv('MYSQL_PASSWORD'),
-    database=os.getenv('MYSQL_DB')
-)
+# PostgreSQL connection setup
+db = None
+
+def get_db():
+    """Get a database connection, reconnecting if the connection was dropped."""
+    global db
+    if db is None or db.closed:
+        db = psycopg2.connect(os.getenv('DATABASE_URL'), sslmode='require')
+        db.autocommit = True
+    return db
+
+def init_db():
+    """Create tables if they don't exist and seed a demo user."""
+    conn = get_db()
+    conn.autocommit = False
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    user_id SERIAL PRIMARY KEY,
+                    username VARCHAR(50) NOT NULL UNIQUE,
+                    password VARCHAR(100) NOT NULL,
+                    first_name VARCHAR(50) NOT NULL,
+                    last_name VARCHAR(50) NOT NULL,
+                    email VARCHAR(100) NOT NULL,
+                    phone VARCHAR(15),
+                    address VARCHAR(255),
+                    wallet_balance DECIMAL(10,2) DEFAULT 10000.00,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS admin (
+                    id SERIAL PRIMARY KEY,
+                    username VARCHAR(50) NOT NULL UNIQUE,
+                    password VARCHAR(100) NOT NULL,
+                    name VARCHAR(100) NOT NULL,
+                    email VARCHAR(100) NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS watchlist (
+                    watchlist_id SERIAL PRIMARY KEY,
+                    user_id INT NOT NULL,
+                    stock_symbol VARCHAR(10) NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE (user_id, stock_symbol),
+                    FOREIGN KEY (user_id) REFERENCES users(user_id)
+                )
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS portfolios (
+                    portfolio_id SERIAL PRIMARY KEY,
+                    user_id INT,
+                    stock_symbol VARCHAR(10),
+                    company_name VARCHAR(50),
+                    quantity INT,
+                    sector VARCHAR(50),
+                    FOREIGN KEY (user_id) REFERENCES users(user_id)
+                )
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS transactions (
+                    transaction_id SERIAL PRIMARY KEY,
+                    user_id INT,
+                    stock_symbol VARCHAR(10),
+                    transaction_type VARCHAR(4) CHECK (transaction_type IN ('buy', 'sell')),
+                    quantity INT,
+                    price DECIMAL(10, 2),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(user_id)
+                )
+            """)
+            # Seed demo user if not exists
+            cur.execute("SELECT user_id FROM users WHERE username = 'demo'")
+            if not cur.fetchone():
+                cur.execute(
+                    "INSERT INTO users (username, password, first_name, last_name, email, wallet_balance) "
+                    "VALUES ('demo', 'demo123', 'Demo', 'User', 'demo@portfolioplus.com', 10000.00)"
+                )
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        print(f"Error initializing database: {e}")
+    finally:
+        conn.autocommit = True
+
+# Initialize database tables and seed data on startup
+init_db()
 
 # Function to fetch stock data#
 def fetch_stock_data(stock_symbols, watchlist_symbols=None):
@@ -62,7 +146,7 @@ def login():
     username = request.form.get('username')
     password = request.form.get('password')
 
-    cursor = db.cursor()
+    cursor = get_db().cursor()
     cursor.execute("SELECT user_id, username,first_name FROM users WHERE username = %s AND password = %s", (username, password))
     user = cursor.fetchone()
 
@@ -87,7 +171,7 @@ def register():
         username = request.form.get('username')
         password = request.form.get('password')
 
-        cursor = db.cursor()
+        cursor = get_db().cursor()
 
         # Server-side validation for username
         cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
@@ -109,7 +193,7 @@ def register():
             "VALUES (%s, %s, %s, %s, %s, %s, %s)",
             (first_name, last_name, email, phone, address, username, password)
         )
-        db.commit()
+        get_db().commit()
         flash('Registration successful! You can now log in.', 'success')
         return redirect(url_for('home'))
 
@@ -121,7 +205,7 @@ def dashboard():
         return redirect(url_for('home'))
 
     user_id = session['user_id']
-    cursor = db.cursor()
+    cursor = get_db().cursor()
     cursor.execute("SELECT wallet_balance FROM users WHERE user_id = %s", (user_id,))
     wallet_balance = cursor.fetchone()[0]
 
@@ -211,7 +295,7 @@ def stocks():
     user_id = session['user_id']
     stock_symbols = get_all_stocks()
 
-    cursor = db.cursor()
+    cursor = get_db().cursor()
     cursor.execute("SELECT stock_symbol FROM watchlist WHERE user_id = %s", (user_id,))
     watchlist_symbols = {row[0] for row in cursor.fetchall()}
     cursor.execute("SELECT wallet_balance FROM users WHERE user_id = %s", (user_id,))
@@ -246,7 +330,7 @@ def get_stock_history(symbol):
 #         return redirect(url_for('home'))
 
 #     user_id = session['user_id']
-#     cursor = db.cursor()
+#     cursor = get_db().cursor()
 #     cursor.execute("SELECT stock_symbol, company_name, quantity, sector FROM portfolios WHERE user_id = %s", (user_id,))
 #     stocks = cursor.fetchall()
 #     cursor.execute("SELECT wallet_balance FROM users WHERE user_id = %s", (user_id,))
@@ -262,7 +346,7 @@ def portfolio():
         return redirect(url_for('home'))
  
     user_id = session['user_id']
-    cursor = db.cursor(dictionary=True)
+    cursor = get_db().cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     
     # Modified query to explicitly select all needed fields
     cursor.execute("""
@@ -307,7 +391,7 @@ def portfolio():
                     SET company_name = %s, sector = %s
                     WHERE user_id = %s AND stock_symbol = %s
                 """, (stock['company_name'], stock['sector'], user_id, stock['stock_symbol']))
-                db.commit()
+                get_db().commit()
                 
         except Exception as e:
             print(f"Error getting price for {stock['stock_symbol']}: {str(e)}")
@@ -326,7 +410,7 @@ def get_portfolio_analytics():
         
     try:
         user_id = session['user_id']
-        cursor = db.cursor(dictionary=True)
+        cursor = get_db().cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         
         # Get user's portfolio
         cursor.execute("""
@@ -386,7 +470,7 @@ def watchlist():
         return redirect(url_for('home'))
 
     user_id = session['user_id']
-    cursor = db.cursor()
+    cursor = get_db().cursor()
     cursor.execute("SELECT stock_symbol FROM watchlist WHERE user_id = %s", (user_id,))
     watchlist_items = cursor.fetchall()
     cursor.execute("SELECT wallet_balance FROM users WHERE user_id = %s", (user_id,))
@@ -403,17 +487,17 @@ def toggle_watchlist(symbol):
         return jsonify({'error': 'User not logged in'}), 403
 
     user_id = session['user_id']
-    cursor = db.cursor()
+    cursor = get_db().cursor()
     cursor.execute("SELECT * FROM watchlist WHERE user_id = %s AND stock_symbol = %s", (user_id, symbol))
     existing_entry = cursor.fetchone()
 
     if existing_entry:
         cursor.execute("DELETE FROM watchlist WHERE user_id = %s AND stock_symbol = %s", (user_id, symbol))
-        db.commit()
+        get_db().commit()
         return jsonify({'in_watchlist': False})
     else:
         cursor.execute("INSERT INTO watchlist (user_id, stock_symbol) VALUES (%s, %s)", (user_id, symbol))
-        db.commit()
+        get_db().commit()
         return jsonify({'in_watchlist': True})
 
 @app.route('/process_transaction', methods=['POST'])
@@ -428,7 +512,8 @@ def process_transaction():
         return jsonify({'error': 'User not logged in'}), 403
 
     user_id = session['user_id']
-    cursor = db.cursor()
+    conn = get_db()
+    cursor = conn.cursor()
     cursor.execute("SELECT wallet_balance FROM users WHERE user_id = %s", (user_id,))
     result = cursor.fetchone()
     if not result:
@@ -442,52 +527,65 @@ def process_transaction():
 
         new_balance = wallet_balance - amount
 
+        conn.autocommit = False
         try:
-            with db.cursor() as cursor:
-                cursor.execute("UPDATE users SET wallet_balance = %s WHERE user_id = %s", (new_balance, user_id))
-                cursor.execute(
+            with conn.cursor() as cur:
+                cur.execute("UPDATE users SET wallet_balance = %s WHERE user_id = %s", (new_balance, user_id))
+                cur.execute(
                     "INSERT INTO transactions (user_id, stock_symbol, transaction_type, quantity, price) "
                     "VALUES (%s, %s, %s, %s, %s)",
                     (user_id, symbol, transaction_type, quantity, amount)
                 )
-                cursor.execute("SELECT quantity FROM portfolios WHERE user_id = %s AND stock_symbol = %s", (user_id, symbol))
-                portfolio_item = cursor.fetchone()
+                cur.execute("SELECT quantity FROM portfolios WHERE user_id = %s AND stock_symbol = %s", (user_id, symbol))
+                portfolio_item = cur.fetchone()
 
                 if portfolio_item:
                     new_quantity = Decimal(portfolio_item[0]) + quantity
-                    cursor.execute("UPDATE portfolios SET quantity = %s WHERE user_id = %s AND stock_symbol = %s",
+                    cur.execute("UPDATE portfolios SET quantity = %s WHERE user_id = %s AND stock_symbol = %s",
                                    (new_quantity, user_id, symbol))
                 else:
-                    cursor.execute("INSERT INTO portfolios (user_id, stock_symbol, quantity) VALUES (%s, %s, %s)",
+                    cur.execute("INSERT INTO portfolios (user_id, stock_symbol, quantity) VALUES (%s, %s, %s)",
                                    (user_id, symbol, quantity))
-            db.commit()
+            conn.commit()
         except Exception as e:
-            db.rollback()
+            conn.rollback()
             print(f"Error: {str(e)}")
             return jsonify({'error': 'Transaction failed'}), 500
+        finally:
+            conn.autocommit = True
 
     elif transaction_type == 'sell':
-        cursor.execute("SELECT quantity FROM portfolios WHERE user_id = %s AND stock_symbol = %s", (user_id, symbol))
-        portfolio_entry = cursor.fetchone()
-        if not portfolio_entry or Decimal(portfolio_entry[0]) < quantity:
-            return jsonify({'error': 'Insufficient stock quantity'})
+        conn.autocommit = False
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT quantity FROM portfolios WHERE user_id = %s AND stock_symbol = %s", (user_id, symbol))
+            portfolio_entry = cur.fetchone()
+            if not portfolio_entry or Decimal(portfolio_entry[0]) < quantity:
+                conn.rollback()
+                return jsonify({'error': 'Insufficient stock quantity'})
 
-        new_quantity = Decimal(portfolio_entry[0]) - quantity
-        if new_quantity > 0:
-            cursor.execute("UPDATE portfolios SET quantity = %s WHERE user_id = %s AND stock_symbol = %s",
-                           (new_quantity, user_id, symbol))
-        else:
-            cursor.execute("DELETE FROM portfolios WHERE user_id = %s AND stock_symbol = %s", (user_id, symbol))
+            new_quantity = Decimal(portfolio_entry[0]) - quantity
+            if new_quantity > 0:
+                cur.execute("UPDATE portfolios SET quantity = %s WHERE user_id = %s AND stock_symbol = %s",
+                               (new_quantity, user_id, symbol))
+            else:
+                cur.execute("DELETE FROM portfolios WHERE user_id = %s AND stock_symbol = %s", (user_id, symbol))
 
-        new_balance = wallet_balance + amount
-        cursor.execute("UPDATE users SET wallet_balance = %s WHERE user_id = %s", (new_balance, user_id))
+            new_balance = wallet_balance + amount
+            cur.execute("UPDATE users SET wallet_balance = %s WHERE user_id = %s", (new_balance, user_id))
 
-        cursor.execute(
-            "INSERT INTO transactions (user_id, stock_symbol, transaction_type, quantity, price) "
-            "VALUES (%s, %s, %s, %s, %s)",
-            (user_id, symbol, transaction_type, quantity, amount)
-        )
-        db.commit()
+            cur.execute(
+                "INSERT INTO transactions (user_id, stock_symbol, transaction_type, quantity, price) "
+                "VALUES (%s, %s, %s, %s, %s)",
+                (user_id, symbol, transaction_type, quantity, amount)
+            )
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            print(f"Error: {str(e)}")
+            return jsonify({'error': 'Transaction failed'}), 500
+        finally:
+            conn.autocommit = True
 
     return jsonify({'success': True})
 
@@ -540,7 +638,7 @@ def get_market_indices():
 def check_username():
     data = request.get_json()  # Use get_json() to parse JSON data
     username = data.get('username')
-    cursor = db.cursor()
+    cursor = get_db().cursor()
     cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
     user = cursor.fetchone()
     cursor.close()
@@ -557,7 +655,7 @@ def check_email():
     if not email:
         return jsonify({'error': 'Email not provided'}), 400
 
-    cursor = db.cursor()
+    cursor = get_db().cursor()
     cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
     
     # Fetch all results to clear any unread results
