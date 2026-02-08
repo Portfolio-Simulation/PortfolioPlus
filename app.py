@@ -262,11 +262,23 @@ def dashboard():
     user_id = session['user_id']
     cursor = get_db().cursor()
     cursor.execute("SELECT wallet_balance FROM users WHERE user_id = %s", (user_id,))
-    wallet_balance = cursor.fetchone()[0]
+    wallet_balance = float(cursor.fetchone()[0])
+
+    # Calculate portfolio value
+    cursor.execute("SELECT stock_symbol, quantity FROM portfolios WHERE user_id = %s", (user_id,))
+    holdings = cursor.fetchall()
+    portfolio_value = 0.0
+    for stock_symbol, quantity in holdings:
+        try:
+            quote = finnhub_get('/quote', {'symbol': stock_symbol})
+            portfolio_value += quote.get('c', 0) * quantity
+        except Exception:
+            pass
 
     username = session.get('user')
     first_name = session.get('first_name')
-    return render_template('dashboard.html', username=username, wallet_balance=wallet_balance,first_name=first_name)
+    return render_template('dashboard.html', username=username, wallet_balance=wallet_balance,
+                           first_name=first_name, portfolio_value=portfolio_value)
 
 def get_all_stocks():
     return [
