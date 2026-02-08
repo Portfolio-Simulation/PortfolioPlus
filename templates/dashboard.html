@@ -6,8 +6,7 @@
 {% block extra_head %}
 <style>
     .market-movers-list {
-        max-height: 200px;
-        overflow-y: auto;
+        overflow: hidden;
     }
     #marketChart {
         height: 380px;
@@ -47,9 +46,19 @@
                         <span class="text-secondary" style="font-size: 0.85rem;">{{ first_name }}</span>
                     </div>
                 </div>
-                <div class="stat-label">Available Balance</div>
-                <div class="balance-amount" style="font-size: 1.75rem; font-weight: 700; color: var(--text-primary);">
-                    ${{ "{:,.2f}".format(wallet_balance) }}
+                <div class="d-flex justify-content-between mt-1">
+                    <div>
+                        <div class="stat-label">Cash Balance</div>
+                        <div style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary);">
+                            ${{ "{:,.2f}".format(wallet_balance) }}
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <div class="stat-label">Portfolio</div>
+                        <div style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary);">
+                            ${{ "{:,.2f}".format(portfolio_value) }}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
