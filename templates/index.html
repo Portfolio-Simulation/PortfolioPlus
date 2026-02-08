@@ -1,252 +1,46 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portfolio+ | Login</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <style>
-        body {
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            overflow: hidden;
-        }
+{% extends "base.html" %}
+{% set show_navbar = false %}
 
-        /* Abstract background pattern */
-        body::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(45deg, rgba(66, 153, 225, 0.05) 25%, transparent 25%),
-                        linear-gradient(-45deg, rgba(66, 153, 225, 0.05) 25%, transparent 25%),
-                        linear-gradient(45deg, transparent 75%, rgba(66, 153, 225, 0.05) 75%),
-                        linear-gradient(-45deg, transparent 75%, rgba(66, 153, 225, 0.05) 75%);
-            background-size: 20px 20px;
-            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
-            z-index: 0;
-        }
+{% block title %}Portfolio+ | Sign In{% endblock %}
 
-        .login-container {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-            padding: 2.5rem;
-            width: 100%;
-            max-width: 420px;
-            position: relative;
-            z-index: 1;
-        }
+{% block body %}
+<div class="auth-wrapper">
+    <div class="auth-bg-pattern"></div>
 
-        .logo-container {
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-
-        .logo {
-            font-size: 2.5rem;
-            color: #2d3748;
-            margin-bottom: 0.5rem;
-        }
-
-        .logo i {
-            color: #4299e1;
-            margin-right: 0.5rem;
-        }
-
-        .form-control {
-            border: 2px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 0.75rem 1rem 0.75rem 2.75rem;
-            height: 48px;
-            width: 100%;
-            background-color: #fff;
-        }
-
-        .input-group {
-            position: relative;
-            margin-bottom: 1rem;
-        }
-
-        .input-group i {
-            position: absolute;
-            left: 1rem;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #a0aec0;
-            z-index: 2;
-        }
-
-        .form-control:focus {
-            border-color: #4299e1;
-            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
-        }
-
-        .form-label {
-            color: #4a5568;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            font-size: 0.95rem;
-        }
-
-        .btn-login {
-            background: linear-gradient(to right, #4299e1, #3182ce);
-            border: none;
-            border-radius: 8px;
-            color: white;
-            padding: 0.875rem;
-            width: 100%;
-            font-weight: 600;
-            margin-top: 1rem;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-
-        .btn-login:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(66, 153, 225, 0.25);
-        }
-
-        .register-link {
-            text-align: center;
-            margin-top: 1.5rem;
-            padding-top: 1.5rem;
-            border-top: 1px solid #e2e8f0;
-        }
-
-        .register-link a {
-            color: #4299e1;
-            font-weight: 600;
-            text-decoration: none;
-            transition: color 0.2s ease;
-        }
-
-        .register-link a:hover {
-            color: #3182ce;
-        }
-
-        /* Adjust placeholder alignment */
-        .form-control::placeholder {
-            text-align: left;
-        }
-
-        /* Alert styling */
-        .alert {
-            position: fixed;
-            top: 1rem;
-            right: 1rem;
-            min-width: 300px;
-            z-index: 1000;
-            border-radius: 8px;
-            padding: 1rem;
-            background-color: #fff;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        .alert-success {
-            border-left: 4px solid #28a745;
-        }
-
-        .alert-danger {
-            border-left: 4px solid #dc3545;
-        }
-
-        .alert-info {
-            border-left: 4px solid #17a2b8;
-        }
-
-        .alert-warning {
-            border-left: 4px solid #ffc107;
-        }
-
-        .alert-dismissible {
-            padding-right: 4rem;
-        }
-
-        .alert-dismissible .close {
-            position: absolute;
-            top: 0.5rem;
-            right: 0.5rem;
-            color: #000;
-            opacity: 0.5;
-        }
-
-        .alert-dismissible .close:hover {
-            opacity: 1;
-        }
-    </style>
-</head>
-<body>
-    <div class="login-container">
-        <div class="logo-container">
-            <h1 class="logo">
-                <i class="fas fa-chart-line"></i>
+    <div class="auth-card">
+        <div class="text-center mb-4">
+            <h1 class="auth-logo">
+                <i class="fas fa-chart-line logo-icon"></i>
                 Portfolio+
             </h1>
+            <p class="auth-subtitle">Sign in to your trading dashboard</p>
         </div>
 
         <form action="{{ url_for('login') }}" method="post">
-            <div class="form-group">
+            <div class="mb-3">
                 <label class="form-label">Username</label>
-                <div class="input-group">
-                    <i class="fas fa-user"></i>
-                    <input type="text" name="username" class="form-control" required>
+                <div class="auth-input-group">
+                    <i class="fas fa-user input-icon"></i>
+                    <input type="text" name="username" class="form-control" placeholder="Enter your username" required>
                 </div>
             </div>
 
-            <div class="form-group">
+            <div class="mb-3">
                 <label class="form-label">Password</label>
-                <div class="input-group">
-                    <i class="fas fa-lock"></i>
-                    <input type="password" name="password" class="form-control" required>
+                <div class="auth-input-group">
+                    <i class="fas fa-lock input-icon"></i>
+                    <input type="password" name="password" class="form-control" placeholder="Enter your password" required>
                 </div>
             </div>
 
-            <button type="submit" class="btn btn-login">Sign In</button>
+            <button type="submit" class="btn btn-auth">
+                Sign In <i class="fas fa-arrow-right ms-2"></i>
+            </button>
         </form>
 
-        <div class="register-link">
-            <p>Don't have an account? <a href="{{ url_for('register') }}">Register here</a></p>
+        <div class="auth-footer">
+            <p class="mb-0">Don't have an account? <a href="{{ url_for('register') }}">Create one</a></p>
         </div>
     </div>
-
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="alert alert-info alert-dismissible fade show" role="alert" style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1050;">
-                    {{ message }}
-                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
-
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
-
-    <script>
-        $(document).ready(function() {
-            // Handle all alert dismissals
-            $('.alert .close').on('click', function(e) {
-                e.preventDefault();
-                $(this).closest('.alert').remove();
-            });
-
-            // Auto-dismiss after 3 seconds
-            window.setTimeout(function() {
-                $(".alert").fadeTo(500, 0).slideUp(500, function(){
-                    $(this).remove(); 
-                });
-            }, 3000);
-        });
-    </script>
-</body>
-</html>
+</div>
+{% endblock %}

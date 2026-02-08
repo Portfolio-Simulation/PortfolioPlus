@@ -334,9 +334,19 @@ def get_market_movers():
 
 @app.route('/logout')
 def logout():
-    session.pop('user', None)
+    session.clear()
     flash('You have been logged out.', 'info')
     return redirect(url_for('home'))
+
+
+@app.after_request
+def add_cache_control(response):
+    """Prevent browser from caching authenticated pages (fixes back-button access after logout)."""
+    if 'user_id' in session:
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+    return response
 
 @app.route('/stocks')
 def stocks():
@@ -415,9 +425,9 @@ def portfolio():
     # Get wallet balance even if portfolio is empty
     if not portfolio_data:
         cursor.execute("SELECT wallet_balance FROM users WHERE user_id = %s", (user_id,))
-        wallet_balance = cursor.fetchone()['wallet_balance']
+        wallet_balance = float(cursor.fetchone()['wallet_balance'])
     else:
-        wallet_balance = portfolio_data[0]['wallet_balance']
+        wallet_balance = float(portfolio_data[0]['wallet_balance'])
  
     # Update current prices and calculate totals
     total_value = 0
