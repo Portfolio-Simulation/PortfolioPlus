@@ -61,20 +61,29 @@
                 <div class="d-flex align-items-center gap-3">
                     <div class="dropdown">
                         <span class="wallet-badge" role="button" data-bs-toggle="dropdown" style="cursor: pointer;">
-                            <i class="fas fa-wallet"></i> ${{ "{:,.2f}".format(wallet_balance) }}
+                            <i class="fas fa-wallet"></i> Wallet
                             <i class="fas fa-chevron-down ms-1" style="font-size: 0.65rem; opacity: 0.6;"></i>
                         </span>
-                        <div class="dropdown-menu dropdown-menu-end p-3" style="min-width: 240px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg);">
+                        <div class="dropdown-menu dropdown-menu-end p-3" style="min-width: 260px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg);">
                             <div class="text-center mb-3">
                                 <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Balance</div>
                                 <div style="font-size: 1.4rem; font-weight: 700; color: var(--text-primary);">${{ "{:,.2f}".format(wallet_balance) }}</div>
                             </div>
-                            <button class="btn btn-accent w-100 mb-2" disabled style="opacity: 0.5;">
-                                <i class="fas fa-plus me-1"></i> Add Balance
-                            </button>
-                            <a href="mailto:shashwat.singh@example.com?subject=Portfolio%2B%20Fund%20Request&body=Hi%2C%0A%0AI%20would%20like%20to%20request%20additional%20funds%20for%20my%20Portfolio%2B%20account.%0A%0AUsername%3A%20{{ session.get('user', '') }}%0AAmount%3A%20%0A%0AThank%20you!" class="btn btn-ghost w-100">
-                                <i class="fas fa-paper-plane me-1"></i> Request Funds
-                            </a>
+                            <!-- Add Balance (coming soon) -->
+                            <div class="position-relative mb-2" id="addBalanceWrap">
+                                <button class="btn btn-accent w-100" style="opacity: 0.5; cursor: default;" id="addBalanceBtn">
+                                    <i class="fas fa-plus me-1"></i> Add Balance
+                                </button>
+                                <div class="coming-soon-tip" id="comingSoonTip">
+                                    <i class="fas fa-rocket me-1"></i> Coming Soon
+                                </div>
+                            </div>
+                            <!-- Request Funds -->
+                            <div class="text-center pt-1" style="border-top: 1px solid var(--border); margin-top: 0.25rem; padding-top: 0.75rem;">
+                                <div style="font-size: 0.75rem; color: var(--text-muted);">
+                                    <i class="fas fa-flask me-1"></i>Demo account -- virtual funds only
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <a class="nav-link text-secondary" href="/logout" title="Logout">
