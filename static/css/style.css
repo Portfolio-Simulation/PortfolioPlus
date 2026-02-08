@@ -929,6 +929,41 @@ a:hover {
     100% { transform: scale(1); opacity: 1; }
 }
 
+/* --- Coming Soon Tooltip --- */
+.coming-soon-tip {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%) scale(0.9);
+    background: var(--bg-elevated);
+    color: var(--accent);
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.4rem 0.75rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    z-index: 10;
+}
+
+.coming-soon-tip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: rgba(139, 92, 246, 0.3);
+}
+
+#addBalanceWrap:hover .coming-soon-tip {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+}
+
 /* --- Utility Classes --- */
 .text-accent { color: var(--accent) !important; }
 .bg-accent-subtle { background: var(--accent-subtle) !important; }
