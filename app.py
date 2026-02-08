@@ -262,11 +262,23 @@ def dashboard():
     user_id = session['user_id']
     cursor = get_db().cursor()
     cursor.execute("SELECT wallet_balance FROM users WHERE user_id = %s", (user_id,))
-    wallet_balance = cursor.fetchone()[0]
+    wallet_balance = float(cursor.fetchone()[0])
+
+    # Calculate portfolio value
+    cursor.execute("SELECT stock_symbol, quantity FROM portfolios WHERE user_id = %s", (user_id,))
+    holdings = cursor.fetchall()
+    portfolio_value = 0.0
+    for stock_symbol, quantity in holdings:
+        try:
+            quote = finnhub_get('/quote', {'symbol': stock_symbol})
+            portfolio_value += quote.get('c', 0) * quantity
+        except Exception:
+            pass
 
     username = session.get('user')
     first_name = session.get('first_name')
-    return render_template('dashboard.html', username=username, wallet_balance=wallet_balance,first_name=first_name)
+    return render_template('dashboard.html', username=username, wallet_balance=wallet_balance,
+                           first_name=first_name, portfolio_value=portfolio_value)
 
 def get_all_stocks():
     return [
@@ -320,9 +332,9 @@ def get_market_movers():
                 print(f"Error processing {symbol}: {str(e)}")
                 continue
         
-        # Sort and get top 5 gainers and losers
-        gainers = sorted(gainers, key=lambda x: x['change'], reverse=True)[:5]
-        losers = sorted(losers, key=lambda x: x['change'])[:5]
+        # Sort and get top 3 gainers and losers
+        gainers = sorted(gainers, key=lambda x: x['change'], reverse=True)[:3]
+        losers = sorted(losers, key=lambda x: x['change'])[:3]
         
         return jsonify({
             'gainers': gainers,
@@ -334,9 +346,19 @@ def get_market_movers():
 
 @app.route('/logout')
 def logout():
-    session.pop('user', None)
+    session.clear()
     flash('You have been logged out.', 'info')
     return redirect(url_for('home'))
+
+
+@app.after_request
+def add_cache_control(response):
+    """Prevent browser from caching authenticated pages (fixes back-button access after logout)."""
+    if 'user_id' in session:
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+    return response
 
 @app.route('/stocks')
 def stocks():
@@ -415,9 +437,9 @@ def portfolio():
     # Get wallet balance even if portfolio is empty
     if not portfolio_data:
         cursor.execute("SELECT wallet_balance FROM users WHERE user_id = %s", (user_id,))
-        wallet_balance = cursor.fetchone()['wallet_balance']
+        wallet_balance = float(cursor.fetchone()['wallet_balance'])
     else:
-        wallet_balance = portfolio_data[0]['wallet_balance']
+        wallet_balance = float(portfolio_data[0]['wallet_balance'])
  
     # Update current prices and calculate totals
     total_value = 0

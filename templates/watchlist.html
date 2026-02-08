@@ -1,302 +1,222 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Watchlist | Portfolio+</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <style>
-        .profit { color: green; }
-        .loss { color: red; }
-        .table th { 
-            background-color: #f8f9fa;
-            position: sticky;
-            top: 0;
-            z-index: 1;
-        }
-        .table-responsive {
-            max-height: 70vh;
-            overflow-y: auto;
-            border-radius: 8px;
-            position: relative;
-            scrollbar-width: thin;
-        }
-        .table-responsive::-webkit-scrollbar {
-            width: 8px;
-        }
-        .table-responsive::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 4px;
-        }
-        .table-responsive::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 4px;
-        }
-        .table-responsive::-webkit-scrollbar-thumb:hover {
-            background: #555;
-        }
-        .card-body::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 30px;
-            background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.9));
-            pointer-events: none;
-        }
-        .table {
-            margin-bottom: 0;
-        }
-        .table td {
-            vertical-align: middle;
-        }
-        .stock-symbol {
-            color: #2E86DE;
-            text-decoration: none;
-            font-weight: 500;
-        }
-        .stock-symbol:hover {
-            text-decoration: none;
-            color: #1C6BC3;
-        }
-        .card {
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            border: none;
-        }
-        .card-header {
-            background-color: #f8f9fa;
-            border-bottom: 1px solid rgba(0,0,0,0.1);
-        }
-    </style>
-</head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <a class="navbar-brand" href="/dashboard">Portfolio+</a>
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav mr-auto">
-                <li class="nav-item">
-                    <a class="nav-link" href="/dashboard">
-                        <i class="fas fa-home"></i> Home
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="/stocks">
-                        <i class="fas fa-chart-line"></i> Stocks
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="/portfolio">
-                        <i class="fas fa-briefcase"></i> My Portfolio
-                    </a>
-                </li>
-                <li class="nav-item active">
-                    <a class="nav-link" href="/watchlist">
-                        <i class="fas fa-glasses"></i> Watchlist
-                    </a>
-                </li>
-            </ul>
-            <span class="navbar-text mr-4"><i class="fas fa-wallet"></i> Balance: ${{ "{:,.2f}".format(wallet_balance) }}</span>
-            
-            <ul class="navbar-nav">
-                <li class="nav-item">
-                    <a class="nav-link" href="/logout">
-                        <i class="fas fa-sign-out-alt"></i> Logout
-                    </a>
-                </li>
-            </ul>
-        </div>
-    </nav>
+{% extends "base.html" %}
+{% set active_page = 'watchlist' %}
 
-    <div class="container mt-4">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">My Watchlist</h5>
+{% block title %}Watchlist | Portfolio+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0" style="font-weight: 700;">
+        <i class="fas fa-eye text-accent me-2"></i>My Watchlist
+    </h4>
+    {% if stocks and stocks|length > 0 %}
+    <span class="text-secondary" style="font-size: 0.85rem;">
+        {{ stocks|length }} stock{{ 's' if stocks|length != 1 else '' }} tracked
+    </span>
+    {% endif %}
+</div>
+
+{% if message %}
+<div class="card">
+    <div class="card-body">
+        <div class="empty-state">
+            <i class="fas fa-eye-slash"></i>
+            <p>{{ message }}</p>
+            <a href="/stocks" class="btn btn-accent mt-2">
+                <i class="fas fa-plus me-2"></i>Browse Stocks
+            </a>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Company</th>
+                        <th>Prev Close</th>
+                        <th>Price</th>
+                        <th>Change</th>
+                        <th>Volume</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stock in stocks %}
+                    <tr>
+                        <td>
+                            <span class="stock-symbol-link" data-symbol="{{ stock.symbol }}">{{ stock.symbol }}</span>
+                        </td>
+                        <td style="color: var(--text-secondary);">{{ stock.company_name }}</td>
+                        <td>${{ stock.prev_price }}</td>
+                        <td style="font-weight: 600;">${{ stock.current_price }}</td>
+                        <td>
+                            <span class="{% if stock.gain_loss >= 0 %}text-profit{% else %}text-loss{% endif %}" style="font-weight: 500;">
+                                {% if stock.gain_loss >= 0 %}+{% endif %}{{ stock.gain_loss }} ({{ stock.percent_change }}%)
+                            </span>
+                        </td>
+                        <td style="color: var(--text-muted);">{{ '{:,.0f}'.format(stock.volume) }}</td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <button class="btn btn-success-dark btn-sm buy-btn">Buy</button>
+                                <button class="btn btn-danger-dark btn-sm sell-btn">Sell</button>
+                                <i class="fas fa-eye watchlist-icon active"
+                                   data-symbol="{{ stock.symbol }}" title="Remove from watchlist"></i>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Buy/Sell Modal -->
+<div class="modal fade" id="buySellModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-exchange-alt text-accent me-2"></i>Trade Stock
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="card-body">
-                {% if message %}
-                    <p class="text-center text-muted">{{ message }}</p>
-                {% else %}
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Symbol</th>
-                                    <th>Company Name</th>
-                                    <th>Previous Price</th>
-                                    <th>Current Price</th>
-                                    <th>Gain/Loss</th>
-                                    <th>Volume</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for stock in stocks %}
-                                <tr>
-                                    <td>
-                                        <a href="#" class="stock-symbol" data-symbol="{{ stock.symbol }}">
-                                            {{ stock.symbol }}
-                                        </a>
-                                    </td>
-                                    <td>{{ stock.company_name }}</td>
-                                    <td>${{ stock.prev_price }}</td>
-                                    <td>${{ stock.current_price }}</td>
-                                    <td class="{% if stock.gain_loss >= 0 %}profit{% else %}loss{% endif %}">
-                                        {{ stock.gain_loss }} ({{ stock.percent_change }}%)
-                                    </td>
-                                    <td>{{ '{:,.0f}'.format(stock.volume) }}</td>
-                                    <td>
-                                        <button class="btn btn-success btn-sm">Buy</button>
-                                        <button class="btn btn-danger btn-sm">Sell</button>
-                                        <i class="fas fa-glasses watchlist-icon text-primary" 
-                                           data-symbol="{{ stock.symbol }}" style="cursor: pointer;"></i>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+            <div class="modal-body">
+                <form id="buySellForm">
+                    <div class="mb-3">
+                        <label class="form-label">Stock Symbol</label>
+                        <input type="text" id="stockSymbol" class="form-control" readonly>
                     </div>
-                {% endif %}
+                    <div class="mb-3">
+                        <label class="form-label">Transaction Type</label>
+                        <select id="transactionType" class="form-select">
+                            <option value="buy">Buy</option>
+                            <option value="sell">Sell</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Quantity</label>
+                        <input type="number" step="0.01" id="stockQuantity" class="form-control" min="0.01" value="1">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Amount ($)</label>
+                        <input type="number" step="0.01" id="totalAmount" class="form-control">
+                    </div>
+                    <div class="alert alert-danger d-none" id="errorMessage" style="background: var(--danger-bg); border-color: rgba(239,68,68,0.2); color: var(--danger);"></div>
+                    <div class="alert alert-success d-none" id="successMessage" style="background: var(--success-bg); border-color: rgba(16,185,129,0.2); color: var(--success);"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-accent" id="confirmTransaction">Confirm Trade</button>
             </div>
         </div>
     </div>
+</div>
+{% endblock %}
 
-    <!-- Buy/Sell Modal -->
-    <div class="modal fade" id="buySellModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Buy/Sell Stocks</h5>
-                    <button type="button" class="close" data-dismiss="modal">
-                        <span>&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <form id="buySellForm">
-                        <div class="form-group">
-                            <label for="stockSymbol">Stock Symbol</label>
-                            <input type="text" id="stockSymbol" class="form-control" readonly>
-                        </div>
-                        <div class="form-group">
-                            <label for="transactionType">Transaction Type</label>
-                            <select id="transactionType" class="form-control">
-                                <option value="buy">Buy</option>
-                                <option value="sell">Sell</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="stockQuantity">Quantity</label>
-                            <input type="number" step="0.01" id="stockQuantity" class="form-control" min="0.01" value="1">
-                        </div>
-                        <div class="form-group">
-                            <label for="totalAmount">Amount ($)</label>
-                            <input type="number" step="0.01" id="totalAmount" class="form-control">
-                        </div>
-                        <div class="alert alert-danger d-none" id="errorMessage"></div>
-                        <div class="alert alert-success d-none" id="successMessage"></div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" id="confirmTransaction">Confirm</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        $(document).ready(function() {
-            $('.watchlist-icon').click(function() {
-                const icon = $(this);
-                const symbol = icon.data('symbol');
+{% block extra_scripts %}
+<script>
+    $(document).ready(function() {
+        const buySellModal = new bootstrap.Modal(document.getElementById('buySellModal'));
+        let currentPrice = 0;
 
-                $.ajax({
-                    url: `/toggle_watchlist/${symbol}`,
-                    method: 'POST',
-                    success: function(response) {
-                        if (response.in_watchlist) {
-                            icon.removeClass('text-muted').addClass('text-primary');
-                        } else {
-                            icon.removeClass('text-primary').addClass('text-muted');
-                        }
-                    },
-                    error: function() {
-                        alert('Error updating watchlist. Please try again.');
-                    }
-                });
-            });
-            // Handle Buy/Sell Modal and transaction confirmation
-            let currentPrice = 0;
+        // Watchlist toggle
+        $('.watchlist-icon').click(function() {
+            const icon = $(this);
+            const symbol = icon.data('symbol');
 
-            $('.btn-success, .btn-danger').click(function() {
-                const symbol = $(this).closest('tr').find('.stock-symbol').text();
-                currentPrice = parseFloat($(this).closest('tr').find('td:eq(3)').text().replace('$', ''));
-                const transactionType = $(this).hasClass('btn-success') ? 'buy' : 'sell';
-
-                $('#stockSymbol').val(symbol);
-                $('#transactionType').val(transactionType);
-                $('#stockQuantity').val(1);
-                $('#totalAmount').val(currentPrice.toFixed(2));
-                $('#buySellModal').modal('show');
-            });
-
-            $('#stockQuantity').on('input', function() {
-                const quantity = parseFloat($(this).val());
-                if (!isNaN(quantity)) {
-                    $('#totalAmount').val((quantity * currentPrice).toFixed(2));
-                }
-            });
-
-            $('#totalAmount').on('input', function() {
-                const amount = parseFloat($(this).val());
-                if (!isNaN(amount) && currentPrice > 0) {
-                    $('#stockQuantity').val((amount / currentPrice).toFixed(2));
-                }
-            });
-
-            $('#confirmTransaction').click(function() {
-                const symbol = $('#stockSymbol').val();
-                const transactionType = $('#transactionType').val();
-                const quantity = parseFloat($('#stockQuantity').val());
-                const amount = parseFloat($('#totalAmount').val());
-
-                if (isNaN(quantity) || isNaN(amount) || quantity <= 0 || amount <= 0) {
-                    $('#errorMessage').text('Invalid quantity or amount. Please check your inputs.').removeClass('d-none');
-                    $('#successMessage').addClass('d-none');
-                    return;
-                }
-
-                $.ajax({
-                    url: `/process_transaction`,
-                    method: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify({ symbol: symbol, transaction_type: transactionType, quantity: quantity, amount: amount }),
-                    success: function(response) {
-                        if (response.error) {
-                            $('#errorMessage').text(response.error).removeClass('d-none');
-                            $('#successMessage').addClass('d-none');
-                        } else {
-                            const confirmationMessage = transactionType === 'buy' ? 'Buy order confirmed!' : 'Sell order confirmed!';
-                            $('#successMessage').text(confirmationMessage).removeClass('d-none');
-                            $('#errorMessage').addClass('d-none');
-                            setTimeout(() => {
+            $.ajax({
+                url: `/toggle_watchlist/${symbol}`,
+                method: 'POST',
+                success: function(response) {
+                    if (!response.in_watchlist) {
+                        // Remove the row with animation
+                        icon.closest('tr').fadeOut(300, function() {
+                            $(this).remove();
+                            if ($('tbody tr').length === 0) {
                                 location.reload();
-                            }, 1500); // Reload the page after a short delay
-                        }
-                    },
-                    error: function() {
-                        $('#errorMessage').text('Error processing the transaction. Please try again.').removeClass('d-none');
-                        $('#successMessage').addClass('d-none');
+                            }
+                        });
                     }
-                });
+                },
+                error: function() {
+                    console.error('Error updating watchlist');
+                }
             });
-
         });
-    </script>
-</body>
-</html>
+
+        // Buy/Sell
+        $('.buy-btn, .sell-btn').click(function() {
+            const row = $(this).closest('tr');
+            const symbol = row.find('.stock-symbol-link').text().trim();
+            currentPrice = parseFloat(row.find('td:eq(3)').text().replace('$', ''));
+            const transactionType = $(this).hasClass('buy-btn') ? 'buy' : 'sell';
+
+            $('#stockSymbol').val(symbol);
+            $('#transactionType').val(transactionType);
+            $('#stockQuantity').val(1);
+            $('#totalAmount').val(currentPrice.toFixed(2));
+            $('#errorMessage').addClass('d-none');
+            $('#successMessage').addClass('d-none');
+            buySellModal.show();
+        });
+
+        $('#stockQuantity').on('input', function() {
+            const quantity = parseFloat($(this).val());
+            if (!isNaN(quantity)) {
+                $('#totalAmount').val((quantity * currentPrice).toFixed(2));
+            }
+        });
+
+        $('#totalAmount').on('input', function() {
+            const amount = parseFloat($(this).val());
+            if (!isNaN(amount) && currentPrice > 0) {
+                $('#stockQuantity').val((amount / currentPrice).toFixed(2));
+            }
+        });
+
+        $('#confirmTransaction').click(function() {
+            const symbol = $('#stockSymbol').val();
+            const transactionType = $('#transactionType').val();
+            const quantity = parseFloat($('#stockQuantity').val());
+            const amount = parseFloat($('#totalAmount').val());
+
+            if (isNaN(quantity) || isNaN(amount) || quantity <= 0 || amount <= 0) {
+                $('#errorMessage').text('Invalid quantity or amount.').removeClass('d-none');
+                $('#successMessage').addClass('d-none');
+                return;
+            }
+
+            const modalBody = document.querySelector('#buySellModal .modal-body');
+            showTxProcessing(modalBody);
+            $('#buySellModal .modal-footer').hide();
+
+            $.ajax({
+                url: '/process_transaction',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ symbol, transaction_type: transactionType, quantity, amount }),
+                success: function(response) {
+                    if (response.error) {
+                        showTxResult(modalBody, false, response.error);
+                        setTimeout(() => { $('#txOverlay').remove(); $('#buySellModal .modal-footer').show(); }, 2000);
+                    } else {
+                        const msg = transactionType === 'buy' ? 'Buy order confirmed!' : 'Sell order confirmed!';
+                        showTxResult(modalBody, true, msg);
+                        setTimeout(() => location.reload(), 1800);
+                    }
+                },
+                error: function() {
+                    showTxResult(modalBody, false, 'Transaction failed');
+                    setTimeout(() => { $('#txOverlay').remove(); $('#buySellModal .modal-footer').show(); }, 2000);
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

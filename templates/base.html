@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Portfolio+{% endblock %}</title>
+
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap 5.3 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect rx='20' width='100' height='100' fill='%238B5CF6'/><text x='50' y='68' font-size='55' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold'>P+</text></svg>">
+
+    <!-- PortfolioPlus Design System -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    {% block navbar %}
+    {% if show_navbar is not defined or show_navbar %}
+    <nav class="navbar navbar-expand-lg">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/dashboard">
+                <i class="fas fa-chart-line brand-icon"></i>Portfolio+
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
+                        <a class="nav-link" href="/dashboard">
+                            <i class="fas fa-home"></i> Home
+                        </a>
+                    </li>
+                    <li class="nav-item {% if active_page == 'stocks' %}active{% endif %}">
+                        <a class="nav-link" href="/stocks">
+                            <i class="fas fa-chart-line"></i> Stocks
+                        </a>
+                    </li>
+                    <li class="nav-item {% if active_page == 'portfolio' %}active{% endif %}">
+                        <a class="nav-link" href="/portfolio">
+                            <i class="fas fa-briefcase"></i> Portfolio
+                        </a>
+                    </li>
+                    <li class="nav-item {% if active_page == 'watchlist' %}active{% endif %}">
+                        <a class="nav-link" href="/watchlist">
+                            <i class="fas fa-eye"></i> Watchlist
+                        </a>
+                    </li>
+                </ul>
+                <div class="d-flex align-items-center gap-3">
+                    <div class="dropdown">
+                        <span class="wallet-badge" role="button" data-bs-toggle="dropdown" style="cursor: pointer;">
+                            <i class="fas fa-wallet"></i> Wallet
+                            <i class="fas fa-chevron-down ms-1" style="font-size: 0.65rem; opacity: 0.6;"></i>
+                        </span>
+                        <div class="dropdown-menu dropdown-menu-end p-3" style="min-width: 260px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg);">
+                            <div class="text-center mb-3">
+                                <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Balance</div>
+                                <div style="font-size: 1.4rem; font-weight: 700; color: var(--text-primary);">${{ "{:,.2f}".format(wallet_balance) }}</div>
+                            </div>
+                            <!-- Add Balance (coming soon) -->
+                            <div class="position-relative mb-2" id="addBalanceWrap">
+                                <button class="btn btn-accent w-100" style="opacity: 0.5; cursor: default;" id="addBalanceBtn">
+                                    <i class="fas fa-plus me-1"></i> Add Balance
+                                </button>
+                                <div class="coming-soon-tip" id="comingSoonTip">
+                                    <i class="fas fa-rocket me-1"></i> Coming Soon
+                                </div>
+                            </div>
+                            <!-- Request Funds -->
+                            <div class="text-center pt-1" style="border-top: 1px solid var(--border); margin-top: 0.25rem; padding-top: 0.75rem;">
+                                <div style="font-size: 0.75rem; color: var(--text-muted);">
+                                    <i class="fas fa-flask me-1"></i>Demo account -- virtual funds only
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <a class="nav-link text-secondary" href="/logout" title="Logout">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+    {% endif %}
+    {% endblock %}
+
+    {% block body %}
+    <div class="main-content">
+        {% block content %}{% endblock %}
+    </div>
+    {% endblock %}
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert-toast alert-{{ category }}" role="alert">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <span>{{ message }}</span>
+                        <button type="button" class="btn-close ms-3" onclick="this.parentElement.parentElement.remove()"></button>
+                    </div>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+
+    <script>
+        // Transaction processing animation
+        function showTxProcessing(modalBody) {
+            const overlay = document.createElement('div');
+            overlay.className = 'tx-overlay';
+            overlay.id = 'txOverlay';
+            overlay.innerHTML = `
+                <div class="tx-spinner"></div>
+                <div class="tx-msg" style="color: var(--text-secondary);">Processing trade...</div>
+            `;
+            modalBody.style.position = 'relative';
+            modalBody.appendChild(overlay);
+        }
+
+        function showTxResult(modalBody, success, message) {
+            const overlay = document.getElementById('txOverlay');
+            if (!overlay) return;
+            if (success) {
+                overlay.innerHTML = `
+                    <div class="tx-success">
+                        <div class="tx-checkmark"><i class="fas fa-check"></i></div>
+                        <div class="tx-msg" style="color: var(--success);">${message}</div>
+                    </div>
+                `;
+            } else {
+                overlay.innerHTML = `
+                    <div class="tx-error">
+                        <div class="tx-error-icon"><i class="fas fa-times"></i></div>
+                        <div class="tx-msg" style="color: var(--danger);">${message}</div>
+                    </div>
+                `;
+            }
+        }
+
+        // Auto-dismiss flash alerts after 4 seconds
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                document.querySelectorAll('.alert-toast').forEach(function(el) {
+                    el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                    el.style.opacity = '0';
+                    el.style.transform = 'translateX(40px)';
+                    setTimeout(function() { el.remove(); }, 500);
+                });
+            }, 4000);
+        });
+    </script>
+
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

@@ -1,251 +1,84 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portfolio+ | Register</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <style>
-        body {
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            overflow-x: hidden;
-            padding: 2rem 0;
-        }
+{% extends "base.html" %}
+{% set show_navbar = false %}
 
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(45deg, rgba(66, 153, 225, 0.05) 25%, transparent 25%),
-                        linear-gradient(-45deg, rgba(66, 153, 225, 0.05) 25%, transparent 25%),
-                        linear-gradient(45deg, transparent 75%, rgba(66, 153, 225, 0.05) 75%),
-                        linear-gradient(-45deg, transparent 75%, rgba(66, 153, 225, 0.05) 75%);
-            background-size: 20px 20px;
-            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
-            z-index: 0;
-        }
+{% block title %}Portfolio+ | Create Account{% endblock %}
 
-        .register-container {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-            padding: 2.5rem;
-            width: 100%;
-            max-width: 520px;
-            position: relative;
-            z-index: 1;
-        }
+{% block body %}
+<div class="auth-wrapper">
+    <div class="auth-bg-pattern"></div>
 
-        .logo-container {
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-
-        .logo {
-            font-size: 2.5rem;
-            color: #2d3748;
-            margin-bottom: 0.5rem;
-        }
-
-        .logo i {
-            color: #4299e1;
-            margin-right: 0.5rem;
-        }
-
-        .input-group {
-            position: relative;
-            margin-bottom: 1rem;
-        }
-
-        .input-group i {
-            position: absolute;
-            left: 1rem;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #a0aec0;
-            z-index: 2;
-        }
-
-        .form-control {
-            border: 2px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 0.75rem 1rem 0.75rem 2.75rem;
-            height: 48px;
-            transition: all 0.2s ease;
-            background-color: #f8fafc;
-            color: #4a5568;
-        }
-
-        .form-control::placeholder {
-            color: #a0aec0;
-            opacity: 1;
-        }
-
-        .form-control:focus::placeholder {
-            opacity: 0.5;
-        }
-
-        .form-label {
-            color: #4a5568;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            font-size: 0.95rem;
-        }
-
-        textarea.form-control {
-            height: 100px;
-            padding: 0.75rem 1rem 0.75rem 2.75rem;
-        }
-
-        .btn-register {
-            background: linear-gradient(to right, #4299e1, #3182ce);
-            border: none;
-            border-radius: 8px;
-            color: white;
-            padding: 0.875rem;
-            width: 100%;
-            font-weight: 600;
-            margin-top: 1rem;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-
-        .btn-register:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(66, 153, 225, 0.25);
-        }
-
-        .login-link {
-            text-align: center;
-            margin-top: 1.5rem;
-            padding-top: 1.5rem;
-            border-top: 1px solid #e2e8f0;
-        }
-
-        .login-link a {
-            color: #4299e1;
-            font-weight: 600;
-            text-decoration: none;
-            transition: color 0.2s ease;
-        }
-
-        .login-link a:hover {
-            color: #3182ce;
-        }
-
-        .alert {
-            position: fixed;
-            top: 1rem;
-            right: 1rem;
-            min-width: 300px;
-            z-index: 1000;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        .form-group {
-            margin: 0;
-            padding: 0;
-        }
-
-        form {
-            margin: 0;
-            padding: 0;
-        }
-    </style>
-</head>
-<body>
-    <div class="register-container">
-        <div class="logo-container">
-            <div class="logo">
-                <i class="fas fa-chart-line"></i>
-                <span>Portfolio+</span>
-            </div>
-            <p class="text-muted">Create your account</p>
+    <div class="auth-card register-card">
+        <div class="text-center mb-4">
+            <h1 class="auth-logo">
+                <i class="fas fa-chart-line logo-icon"></i>
+                Portfolio+
+            </h1>
+            <p class="auth-subtitle">Create your trading account</p>
         </div>
 
         <form action="{{ url_for('register') }}" method="post" id="registerForm">
-            <div class="form-group">
-                <div class="input-group">
-                    <i class="fas fa-user"></i>
+            <div class="row">
+                <div class="col-6">
+                    <div class="mb-3">
+                        <div class="auth-input-group">
+                            <i class="fas fa-user input-icon"></i>
+                            <input type="text" name="first_name" class="form-control" placeholder="First name" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="mb-3">
+                        <div class="auth-input-group">
+                            <i class="fas fa-user input-icon"></i>
+                            <input type="text" name="last_name" class="form-control" placeholder="Last name" required>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <div class="auth-input-group">
+                    <i class="fas fa-at input-icon"></i>
                     <input type="text" name="username" class="form-control" placeholder="Choose a username" required>
                 </div>
             </div>
 
-            <div class="form-group">
-                <div class="input-group">
-                    <i class="fas fa-envelope"></i>
-                    <input type="email" name="email" class="form-control" placeholder="Enter your email" required>
+            <div class="mb-3">
+                <div class="auth-input-group">
+                    <i class="fas fa-envelope input-icon"></i>
+                    <input type="email" name="email" class="form-control" placeholder="Email address" required>
                 </div>
             </div>
 
-            <div class="form-group">
-                <div class="input-group">
-                    <i class="fas fa-lock"></i>
+            <div class="mb-3">
+                <div class="auth-input-group">
+                    <i class="fas fa-lock input-icon"></i>
                     <input type="password" name="password" class="form-control" placeholder="Create a password" required>
                 </div>
             </div>
 
-            <div class="form-group">
-                <div class="input-group">
-                    <i class="fas fa-id-card"></i>
-                    <input type="text" name="first_name" class="form-control" placeholder="Enter your first name" required>
+            <div class="mb-3">
+                <div class="auth-input-group">
+                    <i class="fas fa-phone input-icon"></i>
+                    <input type="tel" name="phone" class="form-control" placeholder="Phone number" required>
                 </div>
             </div>
 
-            <div class="form-group">
-                <div class="input-group">
-                    <i class="fas fa-id-card"></i>
-                    <input type="text" name="last_name" class="form-control" placeholder="Enter your last name" required>
+            <div class="mb-3">
+                <div class="auth-input-group">
+                    <i class="fas fa-location-dot input-icon input-icon-textarea"></i>
+                    <textarea name="address" class="form-control" placeholder="Address" required></textarea>
                 </div>
             </div>
 
-            <div class="form-group">
-                <div class="input-group">
-                    <i class="fas fa-phone"></i>
-                    <input type="tel" name="phone" class="form-control" placeholder="Enter your phone number" required>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <div class="input-group">
-                    <i class="fas fa-home"></i>
-                    <textarea name="address" class="form-control" placeholder="Enter your address" required></textarea>
-                </div>
-            </div>
-
-            <button type="submit" class="btn btn-register">
-                Create Account <i class="fas fa-arrow-right ml-2"></i>
+            <button type="submit" class="btn btn-auth">
+                Create Account <i class="fas fa-arrow-right ms-2"></i>
             </button>
         </form>
 
-        <div class="login-link">
-            <p class="mb-0">Already have an account? <a href="{{ url_for('home') }}">Login here</a></p>
+        <div class="auth-footer">
+            <p class="mb-0">Already have an account? <a href="{{ url_for('home') }}">Sign in</a></p>
         </div>
     </div>
-
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="close" data-dismiss="alert">
-                        <span>&times;</span>
-                    </button>
-                </div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
-
-    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+</div>
+{% endblock %}
