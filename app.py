@@ -320,9 +320,9 @@ def get_market_movers():
                 print(f"Error processing {symbol}: {str(e)}")
                 continue
         
-        # Sort and get top 5 gainers and losers
-        gainers = sorted(gainers, key=lambda x: x['change'], reverse=True)[:5]
-        losers = sorted(losers, key=lambda x: x['change'])[:5]
+        # Sort and get top 3 gainers and losers
+        gainers = sorted(gainers, key=lambda x: x['change'], reverse=True)[:3]
+        losers = sorted(losers, key=lambda x: x['change'])[:3]
         
         return jsonify({
             'gainers': gainers,

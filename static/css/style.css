@@ -837,6 +837,98 @@ a:hover {
     color: var(--accent) !important;
 }
 
+/* --- Transaction Processing Animation --- */
+.tx-processing {
+    position: relative;
+    pointer-events: none;
+}
+
+.tx-overlay {
+    position: absolute;
+    inset: 0;
+    background: var(--bg-surface);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-lg);
+    z-index: 10;
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.tx-spinner {
+    width: 48px;
+    height: 48px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    margin-bottom: 1rem;
+}
+
+.tx-success {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.tx-checkmark {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--success-bg);
+    border: 2px solid var(--success);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.75rem;
+    animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.tx-checkmark i {
+    color: var(--success);
+    font-size: 1.5rem;
+}
+
+.tx-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.tx-error-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--danger-bg);
+    border: 2px solid var(--danger);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.75rem;
+    animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.tx-error-icon i {
+    color: var(--danger);
+    font-size: 1.5rem;
+}
+
+.tx-msg {
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+@keyframes popIn {
+    0% { transform: scale(0); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
 /* --- Utility Classes --- */
 .text-accent { color: var(--accent) !important; }
 .bg-accent-subtle { background: var(--accent-subtle) !important; }

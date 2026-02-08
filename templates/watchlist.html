@@ -192,6 +192,10 @@
                 return;
             }
 
+            const modalBody = document.querySelector('#buySellModal .modal-body');
+            showTxProcessing(modalBody);
+            $('#buySellModal .modal-footer').hide();
+
             $.ajax({
                 url: '/process_transaction',
                 method: 'POST',
@@ -199,17 +203,17 @@
                 data: JSON.stringify({ symbol, transaction_type: transactionType, quantity, amount }),
                 success: function(response) {
                     if (response.error) {
-                        $('#errorMessage').text(response.error).removeClass('d-none');
-                        $('#successMessage').addClass('d-none');
+                        showTxResult(modalBody, false, response.error);
+                        setTimeout(() => { $('#txOverlay').remove(); $('#buySellModal .modal-footer').show(); }, 2000);
                     } else {
-                        $('#successMessage').text(transactionType === 'buy' ? 'Buy order confirmed!' : 'Sell order confirmed!').removeClass('d-none');
-                        $('#errorMessage').addClass('d-none');
-                        setTimeout(() => location.reload(), 1500);
+                        const msg = transactionType === 'buy' ? 'Buy order confirmed!' : 'Sell order confirmed!';
+                        showTxResult(modalBody, true, msg);
+                        setTimeout(() => location.reload(), 1800);
                     }
                 },
                 error: function() {
-                    $('#errorMessage').text('Transaction failed. Please try again.').removeClass('d-none');
-                    $('#successMessage').addClass('d-none');
+                    showTxResult(modalBody, false, 'Transaction failed');
+                    setTimeout(() => { $('#txOverlay').remove(); $('#buySellModal .modal-footer').show(); }, 2000);
                 }
             });
         });

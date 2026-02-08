@@ -59,9 +59,24 @@
                     </li>
                 </ul>
                 <div class="d-flex align-items-center gap-3">
-                    <span class="wallet-badge">
-                        <i class="fas fa-wallet"></i> ${{ "{:,.2f}".format(wallet_balance) }}
-                    </span>
+                    <div class="dropdown">
+                        <span class="wallet-badge" role="button" data-bs-toggle="dropdown" style="cursor: pointer;">
+                            <i class="fas fa-wallet"></i> ${{ "{:,.2f}".format(wallet_balance) }}
+                            <i class="fas fa-chevron-down ms-1" style="font-size: 0.65rem; opacity: 0.6;"></i>
+                        </span>
+                        <div class="dropdown-menu dropdown-menu-end p-3" style="min-width: 240px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg);">
+                            <div class="text-center mb-3">
+                                <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Balance</div>
+                                <div style="font-size: 1.4rem; font-weight: 700; color: var(--text-primary);">${{ "{:,.2f}".format(wallet_balance) }}</div>
+                            </div>
+                            <button class="btn btn-accent w-100 mb-2" disabled style="opacity: 0.5;">
+                                <i class="fas fa-plus me-1"></i> Add Balance
+                            </button>
+                            <a href="mailto:shashwat.singh@example.com?subject=Portfolio%2B%20Fund%20Request&body=Hi%2C%0A%0AI%20would%20like%20to%20request%20additional%20funds%20for%20my%20Portfolio%2B%20account.%0A%0AUsername%3A%20{{ session.get('user', '') }}%0AAmount%3A%20%0A%0AThank%20you!" class="btn btn-ghost w-100">
+                                <i class="fas fa-paper-plane me-1"></i> Request Funds
+                            </a>
+                        </div>
+                    </div>
                     <a class="nav-link text-secondary" href="/logout" title="Logout">
                         <i class="fas fa-sign-out-alt"></i>
                     </a>
@@ -98,6 +113,39 @@
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
 
     <script>
+        // Transaction processing animation
+        function showTxProcessing(modalBody) {
+            const overlay = document.createElement('div');
+            overlay.className = 'tx-overlay';
+            overlay.id = 'txOverlay';
+            overlay.innerHTML = `
+                <div class="tx-spinner"></div>
+                <div class="tx-msg" style="color: var(--text-secondary);">Processing trade...</div>
+            `;
+            modalBody.style.position = 'relative';
+            modalBody.appendChild(overlay);
+        }
+
+        function showTxResult(modalBody, success, message) {
+            const overlay = document.getElementById('txOverlay');
+            if (!overlay) return;
+            if (success) {
+                overlay.innerHTML = `
+                    <div class="tx-success">
+                        <div class="tx-checkmark"><i class="fas fa-check"></i></div>
+                        <div class="tx-msg" style="color: var(--success);">${message}</div>
+                    </div>
+                `;
+            } else {
+                overlay.innerHTML = `
+                    <div class="tx-error">
+                        <div class="tx-error-icon"><i class="fas fa-times"></i></div>
+                        <div class="tx-msg" style="color: var(--danger);">${message}</div>
+                    </div>
+                `;
+            }
+        }
+
         // Auto-dismiss flash alerts after 4 seconds
         document.addEventListener('DOMContentLoaded', function() {
             setTimeout(function() {
