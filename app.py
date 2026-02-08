@@ -2,20 +2,66 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 import psycopg2
 import psycopg2.extras
 import os
+import time
+from datetime import datetime
 import requests as http_requests
 from dotenv import load_dotenv
-import yfinance as yf
 from decimal import Decimal
 
 # Load environment variables from .env
 load_dotenv()
 
-# Create a requests session with browser headers for yfinance
-# This avoids Yahoo Finance blocking cloud/datacenter IPs
-yf_session = http_requests.Session()
-yf_session.headers.update({
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-})
+# Finnhub API configuration
+FINNHUB_API_KEY = os.getenv('FINNHUB_API_KEY')
+FINNHUB_BASE = 'https://finnhub.io/api/v1'
+
+# Simple in-memory cache (key -> (timestamp, data)) with 5-min TTL
+_cache = {}
+CACHE_TTL = 300  # 5 minutes
+
+def finnhub_get(endpoint, params=None):
+    """Make a cached GET request to Finnhub API."""
+    cache_key = f"{endpoint}:{params}"
+    now = time.time()
+    if cache_key in _cache and (now - _cache[cache_key][0]) < CACHE_TTL:
+        return _cache[cache_key][1]
+    params = params or {}
+    params['token'] = FINNHUB_API_KEY
+    resp = http_requests.get(f"{FINNHUB_BASE}{endpoint}", params=params)
+    data = resp.json()
+    _cache[cache_key] = (now, data)
+    return data
+
+def yahoo_chart(symbol, period='1y', interval='1d'):
+    """Fetch historical chart data directly from Yahoo Finance (no API key needed)."""
+    cache_key = f"yahoo_chart:{symbol}:{period}:{interval}"
+    now = time.time()
+    if cache_key in _cache and (now - _cache[cache_key][0]) < CACHE_TTL:
+        return _cache[cache_key][1]
+    try:
+        url = f'https://query1.finance.yahoo.com/v8/finance/chart/{symbol}'
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+        resp = http_requests.get(url, headers=headers, params={
+            'range': period, 'interval': interval
+        }, timeout=10)
+        raw = resp.json()
+        result = raw.get('chart', {}).get('result', [])
+        if not result:
+            return None
+        chart = result[0]
+        timestamps = chart.get('timestamp', [])
+        quotes = chart.get('indicators', {}).get('quote', [{}])[0]
+        closes = [c for c in quotes.get('close', []) if c is not None]
+        volumes = [v if v is not None else 0 for v in quotes.get('volume', [])]
+        dates = [datetime.fromtimestamp(t).strftime('%Y-%m-%d') for t in timestamps[:len(closes)]]
+        chart_data = {'dates': dates, 'prices': closes, 'volumes': volumes[:len(closes)]}
+        _cache[cache_key] = (now, chart_data)
+        return chart_data
+    except Exception as e:
+        print(f"Error fetching Yahoo chart for {symbol}: {e}")
+        return None
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'your_secret_key')
@@ -111,22 +157,23 @@ def init_db():
 # Initialize database tables and seed data on startup
 init_db()
 
-# Function to fetch stock data#
+# Function to fetch stock data using Finnhub API
 def fetch_stock_data(stock_symbols, watchlist_symbols=None):
     stocks_data = []
     for symbol in stock_symbols:
         try:
-            ticker = yf.Ticker(symbol, session=yf_session)
-            hist = ticker.history(period="5d")
-            if hist.empty or len(hist) < 2:
+            quote = finnhub_get('/quote', {'symbol': symbol})
+            profile = finnhub_get('/stock/profile2', {'symbol': symbol})
+
+            current_price = quote.get('c', 0)
+            prev_price = quote.get('pc', 0)
+
+            if not current_price or not prev_price or prev_price == 0:
                 continue
 
-            info = ticker.info
-            company_name = info.get('longName') or info.get('shortName') or symbol
-            current_price = hist['Close'][-1]
-            prev_price = hist['Close'][-2]
             gain_loss = round(current_price - prev_price, 2)
             percent_change = round((gain_loss / prev_price) * 100, 2)
+            company_name = profile.get('name', symbol)
 
             stocks_data.append({
                 'symbol': symbol,
@@ -135,7 +182,7 @@ def fetch_stock_data(stock_symbols, watchlist_symbols=None):
                 'current_price': round(current_price, 2),
                 'gain_loss': gain_loss,
                 'percent_change': percent_change,
-                'volume': int(hist['Volume'][-1]),
+                'volume': 0,
                 'in_watchlist': (symbol in watchlist_symbols) if watchlist_symbols else False
             })
         except Exception as e:
@@ -250,20 +297,17 @@ def get_market_movers():
         
         for symbol in symbols:
             try:
-                ticker = yf.Ticker(symbol, session=yf_session)
-                hist = ticker.history(period="5d")
-                if hist.empty or len(hist) < 2:
-                    continue
-                info = ticker.info
-                current_price = hist['Close'][-1]
-                prev_close = hist['Close'][-2]
+                quote = finnhub_get('/quote', {'symbol': symbol})
+                profile = finnhub_get('/stock/profile2', {'symbol': symbol})
+
+                current_price = quote.get('c', 0)
+                prev_close = quote.get('pc', 0)
                 
-                # Ensure valid data is retrieved
-                if current_price is not None and prev_close is not None and prev_close > 0:
+                if current_price and prev_close and prev_close > 0:
                     change_pct = ((current_price - prev_close) / prev_close) * 100
                     stock_data = {
                         'symbol': symbol,
-                        'name': info.get('shortName', symbol),
+                        'name': profile.get('name', symbol),
                         'price': round(current_price, 2),
                         'change': round(change_pct, 2)
                     }
@@ -315,18 +359,16 @@ def stocks():
 @app.route('/get_stock_history/<symbol>')
 def get_stock_history(symbol):
     try:
-        ticker = yf.Ticker(symbol, session=yf_session)
-        history = ticker.history(period="1y")
-        if history.empty:
+        chart_data = yahoo_chart(symbol, period='1y', interval='1d')
+        if not chart_data:
             return jsonify({'error': 'No data available'}), 404
 
-        data = {
-            'dates': [date.strftime('%Y-%m-%d') for date in history.index],
-            'prices': history['Close'].tolist(),
-            'volume': history['Volume'].tolist(),
+        return jsonify({
+            'dates': chart_data['dates'],
+            'prices': chart_data['prices'],
+            'volume': chart_data['volumes'],
             'symbol': symbol
-        }
-        return jsonify(data)
+        })
     except Exception as e:
         print(f"Error fetching data for {symbol}: {str(e)}")
         return jsonify({'error': 'Failed to fetch stock data'}), 500
@@ -381,17 +423,17 @@ def portfolio():
     total_value = 0
     for stock in portfolio_data:
         try:
-            ticker = yf.Ticker(stock['stock_symbol'], session=yf_session)
-            info = ticker.info
-            current_price = info.get('regularMarketPrice', 0)
+            quote = finnhub_get('/quote', {'symbol': stock['stock_symbol']})
+            current_price = quote.get('c', 0)
             stock['current_price'] = current_price
             stock['total_value'] = current_price * stock['quantity']
             total_value += stock['total_value']
             
             # Update company name and sector if they're missing
             if not stock['company_name'] or stock['company_name'] == 'None':
-                stock['company_name'] = info.get('longName') or info.get('shortName') or stock['stock_symbol']
-                stock['sector'] = info.get('sector') or 'Technology'
+                profile = finnhub_get('/stock/profile2', {'symbol': stock['stock_symbol']})
+                stock['company_name'] = profile.get('name', stock['stock_symbol'])
+                stock['sector'] = profile.get('finnhubIndustry', 'Technology')
                 
                 # Update the database with correct information
                 cursor.execute("""
@@ -433,8 +475,8 @@ def get_portfolio_analytics():
         total_value = 0
         
         for stock in portfolio:
-            ticker = yf.Ticker(stock['stock_symbol'], session=yf_session)
-            current_price = ticker.info.get('regularMarketPrice', 0)
+            quote = finnhub_get('/quote', {'symbol': stock['stock_symbol']})
+            current_price = quote.get('c', 0)
             stock_value = current_price * stock['quantity']
             total_value += stock_value
             
@@ -600,16 +642,16 @@ def process_transaction():
 @app.route('/get_market_indices')
 def get_market_indices():
     # Get the 'timeframe' query parameter from the request
-    timeframe = request.args.get('timeframe', '1y')  # Default to 1 year if not specified
+    timeframe = request.args.get('timeframe', '1Y')  # Default to 1 year if not specified
     
-    # Map the accepted timeframes to periods for yfinance
-    periods = {
+    # Map timeframes to Yahoo Finance range values
+    range_map = {
         '1M': '1mo',
         '3M': '3mo',
         '6M': '6mo',
         '1Y': '1y'
     }
-    period = periods.get(timeframe, '1y')  # Default to 1 year if timeframe is invalid
+    period = range_map.get(timeframe, '1y')
 
     try:
         indices = {
@@ -622,18 +664,18 @@ def get_market_indices():
         }
         data = {}
         for symbol, info in indices.items():
-            ticker = yf.Ticker(symbol, session=yf_session)
-            hist = ticker.history(period=period)
-            if hist.empty:
+            chart_data = yahoo_chart(symbol, period=period, interval='1d')
+            if not chart_data or len(chart_data['prices']) < 2:
                 continue
+            prices = chart_data['prices']
             data[symbol] = {
                 'name': info['name'],
                 'color': info['color'],
-                'dates': [date.strftime('%Y-%m-%d') for date in hist.index],
-                'prices': hist['Close'].tolist(),
-                'current_price': round(hist['Close'][-1], 2),
-                'change': round(hist['Close'][-1] - hist['Close'][-2], 2),
-                'change_percent': round(((hist['Close'][-1] - hist['Close'][-2]) / hist['Close'][-2]) * 100, 2)
+                'dates': chart_data['dates'],
+                'prices': prices,
+                'current_price': round(prices[-1], 2),
+                'change': round(prices[-1] - prices[-2], 2),
+                'change_percent': round(((prices[-1] - prices[-2]) / prices[-2]) * 100, 2)
             }
         return jsonify(data)
     except Exception as e:
@@ -680,11 +722,10 @@ def check_email():
 @app.route('/get_stock_price/<symbol>')
 def get_stock_price(symbol):
     try:
-        ticker = yf.Ticker(symbol, session=yf_session)
-        hist = ticker.history(period="5d")
-        current_price = hist['Close'][-1]
+        quote = finnhub_get('/quote', {'symbol': symbol})
+        current_price = quote.get('c')
         
-        if current_price is None:
+        if not current_price:
             return jsonify({'error': 'Price not available'}), 404
             
         return jsonify({
