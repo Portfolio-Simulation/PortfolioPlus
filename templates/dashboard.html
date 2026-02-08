@@ -5,11 +5,8 @@
 
 {% block extra_head %}
 <style>
-    .market-movers-list {
-        overflow: hidden;
-    }
-    #marketChart {
-        height: 380px;
+    #sectorChart {
+        height: 220px;
         width: 100%;
     }
     .summary-grid {
@@ -27,6 +24,110 @@
             grid-template-columns: 1fr;
         }
     }
+    .holdings-table th {
+        background: var(--bg-elevated);
+        color: var(--text-secondary);
+        font-weight: 600;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 1px solid var(--border);
+        padding: 0.7rem 0.85rem;
+        white-space: nowrap;
+    }
+    .holdings-table td {
+        padding: 0.7rem 0.85rem;
+        border-bottom: 1px solid var(--border);
+        vertical-align: middle;
+        font-size: 0.85rem;
+    }
+    .holdings-table tbody tr {
+        transition: background var(--transition);
+    }
+    .holdings-table tbody tr:hover {
+        background: var(--accent-subtle) !important;
+    }
+    .perf-badge {
+        display: inline-block;
+        padding: 0.2rem 0.5rem;
+        border-radius: var(--radius-sm);
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    .perf-badge.positive {
+        background: var(--success-bg);
+        color: var(--success);
+    }
+    .perf-badge.negative {
+        background: var(--danger-bg);
+        color: var(--danger);
+    }
+
+    /* --- Sparkline Index Cards --- */
+    .index-cards-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+    }
+    @media (max-width: 992px) {
+        .index-cards-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+    @media (max-width: 576px) {
+        .index-cards-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    .index-card {
+        background: var(--bg-surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 1rem 1.25rem;
+        transition: all var(--transition);
+        position: relative;
+        overflow: hidden;
+    }
+    .index-card:hover {
+        border-color: rgba(139, 92, 246, 0.3);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+    .index-card .index-name {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.4rem;
+    }
+    .index-card .index-price {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        letter-spacing: -0.02em;
+    }
+    .index-card .index-change {
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin-top: 0.15rem;
+    }
+    .index-card .sparkline-wrap {
+        margin-top: 0.6rem;
+        height: 40px;
+        overflow: hidden;
+    }
+    .index-card .sparkline-wrap svg {
+        display: block;
+        width: 100%;
+        height: 40px;
+    }
+    .index-card .index-loading {
+        text-align: center;
+        padding: 0.5rem 0;
+        color: var(--text-muted);
+        font-size: 0.8rem;
+    }
 </style>
 {% endblock %}
 
@@ -34,9 +135,13 @@
 <div class="row g-4">
     <!-- Left Sidebar -->
     <div class="col-lg-3">
-        <!-- Welcome Card -->
+        <!-- Welcome & Portfolio Summary Card -->
+        {% set net_worth = wallet_balance + portfolio_value %}
+        {% set total_return = net_worth - 10000 %}
+        {% set total_return_pct = ((total_return / 10000) * 100) %}
         <div class="card mb-4">
             <div class="card-body">
+                <!-- Greeting -->
                 <div class="d-flex align-items-center mb-3">
                     <div class="bg-accent-subtle rounded-circle d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
                         <i class="fas fa-user text-accent"></i>
@@ -46,19 +151,40 @@
                         <span class="text-secondary" style="font-size: 0.85rem;">{{ first_name }}</span>
                     </div>
                 </div>
-                <div class="d-flex justify-content-between mt-1">
+
+                <!-- Net Worth (prominent) -->
+                <div class="text-center mb-3" style="padding: 0.75rem 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+                    <div class="stat-label">Net Worth</div>
+                    <div style="font-size: 1.6rem; font-weight: 700; color: var(--text-primary); letter-spacing: -0.02em;">
+                        ${{ "{:,.2f}".format(net_worth) }}
+                    </div>
+                    <span class="perf-badge {{ 'positive' if total_return >= 0 else 'negative' }}" style="font-size: 0.75rem; margin-top: 0.25rem;">
+                        {{ "+" if total_return >= 0 else "" }}${{ "{:,.2f}".format(total_return) }} ({{ "+" if total_return_pct >= 0 else "" }}{{ "{:.2f}".format(total_return_pct) }}%)
+                    </span>
+                </div>
+
+                <!-- Cash / Portfolio breakdown -->
+                <div class="d-flex justify-content-between mb-3">
                     <div>
-                        <div class="stat-label">Cash Balance</div>
-                        <div style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary);">
+                        <div class="stat-label" style="margin-bottom: 0.2rem;">Cash</div>
+                        <div style="font-size: 1.05rem; font-weight: 600; color: var(--text-primary);">
                             ${{ "{:,.2f}".format(wallet_balance) }}
                         </div>
                     </div>
                     <div class="text-end">
-                        <div class="stat-label">Portfolio</div>
-                        <div style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary);">
+                        <div class="stat-label" style="margin-bottom: 0.2rem;">Invested</div>
+                        <div style="font-size: 1.05rem; font-weight: 600; color: var(--text-primary);">
                             ${{ "{:,.2f}".format(portfolio_value) }}
                         </div>
                     </div>
+                </div>
+
+                <!-- Best / Worst Performer -->
+                <div style="padding-top: 0.6rem; border-top: 1px solid var(--border);">
+                    <div class="stat-label" style="margin-bottom: 0.35rem;">
+                        <i class="fas fa-arrow-up text-success me-1"></i>Best / <i class="fas fa-arrow-down text-danger ms-1 me-1"></i>Worst
+                    </div>
+                    <div id="bestWorstContent" style="font-size: 0.85rem; color: var(--text-muted);">Loading...</div>
                 </div>
             </div>
         </div>
@@ -81,27 +207,20 @@
             </div>
         </div>
 
-        <!-- Market Movers -->
+        <!-- Sector Allocation -->
         <div class="card">
             <div class="card-header">
-                <i class="fas fa-arrow-trend-up text-accent me-2"></i>Market Movers
+                <i class="fas fa-chart-pie text-accent me-2"></i>Sector Allocation
             </div>
             <div class="card-body">
-                <h6 class="text-success mb-2" style="font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">
-                    <i class="fas fa-caret-up me-1"></i>Top Gainers
-                </h6>
-                <div id="topGainers" class="market-movers-list mb-3">
-                    <div class="text-center text-secondary py-3">
-                        <div class="spinner-accent mx-auto mb-2" style="width: 1.5rem; height: 1.5rem; border-width: 2px;"></div>
-                    </div>
-                </div>
-
-                <h6 class="text-danger mb-2" style="font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">
-                    <i class="fas fa-caret-down me-1"></i>Top Losers
-                </h6>
-                <div id="topLosers" class="market-movers-list">
-                    <div class="text-center text-secondary py-3">
-                        <div class="spinner-accent mx-auto mb-2" style="width: 1.5rem; height: 1.5rem; border-width: 2px;"></div>
+                <div id="sectorChart"></div>
+                <div id="sectorEmpty" class="d-none">
+                    <div class="text-center py-3">
+                        <i class="fas fa-folder-open" style="font-size: 1.5rem; color: var(--text-muted); opacity: 0.5;"></i>
+                        <p class="mb-0 mt-2" style="font-size: 0.85rem; color: var(--text-muted);">
+                            No holdings yet.<br>
+                            <a href="/stocks" style="font-size: 0.8rem;">Browse Stocks</a>
+                        </p>
                     </div>
                 </div>
             </div>
@@ -110,31 +229,112 @@
 
     <!-- Main Content -->
     <div class="col-lg-9">
-        <!-- Market Chart -->
-        <div class="chart-container mb-4">
-            <div class="chart-header">
-                <h5><i class="fas fa-chart-line text-accent me-2"></i>Market Indices</h5>
-                <div class="d-flex gap-1">
-                    <button class="time-btn" onclick="updateChart('1M')">1M</button>
-                    <button class="time-btn" onclick="updateChart('3M')">3M</button>
-                    <button class="time-btn" onclick="updateChart('6M')">6M</button>
-                    <button class="time-btn active" onclick="updateChart('1Y')">1Y</button>
-                </div>
+        <!-- Market Overview - Sparkline Cards -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0" style="font-weight: 700;">
+                <i class="fas fa-globe text-accent me-2"></i>Market Overview
+            </h5>
+        </div>
+        <div class="index-cards-grid mb-4" id="indexCardsGrid">
+            <div class="index-card" id="card-SPY">
+                <div class="index-name">S&P 500</div>
+                <div class="index-loading"><div class="spinner-accent mx-auto" style="width: 1.2rem; height: 1.2rem; border-width: 2px;"></div></div>
             </div>
-            <div style="padding: 1rem;">
-                <div id="marketChart"></div>
+            <div class="index-card" id="card-DIA">
+                <div class="index-name">Dow Jones</div>
+                <div class="index-loading"><div class="spinner-accent mx-auto" style="width: 1.2rem; height: 1.2rem; border-width: 2px;"></div></div>
+            </div>
+            <div class="index-card" id="card-QQQ">
+                <div class="index-name">NASDAQ</div>
+                <div class="index-loading"><div class="spinner-accent mx-auto" style="width: 1.2rem; height: 1.2rem; border-width: 2px;"></div></div>
+            </div>
+            <div class="index-card" id="card-IWM">
+                <div class="index-name">Russell 2000</div>
+                <div class="index-loading"><div class="spinner-accent mx-auto" style="width: 1.2rem; height: 1.2rem; border-width: 2px;"></div></div>
+            </div>
+            <div class="index-card" id="card-VGK">
+                <div class="index-name">FTSE Europe</div>
+                <div class="index-loading"><div class="spinner-accent mx-auto" style="width: 1.2rem; height: 1.2rem; border-width: 2px;"></div></div>
+            </div>
+            <div class="index-card" id="card-EEM">
+                <div class="index-name">Emerging Markets</div>
+                <div class="index-loading"><div class="spinner-accent mx-auto" style="width: 1.2rem; height: 1.2rem; border-width: 2px;"></div></div>
             </div>
         </div>
 
-        <!-- Market Summary Cards -->
-        <div class="summary-grid">
-            {% for index in ['S&P 500', 'Dow Jones', 'NASDAQ', 'Russell 2000', 'FTSE Europe', 'Emerging Markets'] %}
-            <div class="stat-card text-center">
-                <div class="stat-label">{{ index }}</div>
-                <div class="stat-value" id="{{ index.lower().replace(' ', '').replace('&', '') }}Price" style="font-size: 1.4rem;">--</div>
-                <div class="mt-1" id="{{ index.lower().replace(' ', '').replace('&', '') }}Change" style="font-size: 0.85rem; font-weight: 500;">--</div>
+        <!-- Holdings Table with Trade Buttons -->
+        <div id="holdingsSection" class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-layer-group text-accent me-2"></i>Your Holdings</span>
+                <span id="holdingsCount" class="text-secondary" style="font-size: 0.8rem;"></span>
             </div>
-            {% endfor %}
+            <div class="card-body p-0">
+                <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
+                    <table class="table table-hover holdings-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Stock</th>
+                                <th>Shares</th>
+                                <th>Avg Cost</th>
+                                <th>Current Price</th>
+                                <th>Value</th>
+                                <th>Gain/Loss</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="holdingsBody">
+                            <tr>
+                                <td colspan="7" class="text-center py-3">
+                                    <div class="spinner-accent mx-auto mb-2" style="width: 1.5rem; height: 1.5rem; border-width: 2px;"></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Buy/Sell Modal -->
+<div class="modal fade" id="buySellModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-exchange-alt text-accent me-2"></i>Trade Stock
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="buySellForm">
+                    <div class="mb-3">
+                        <label class="form-label">Stock Symbol</label>
+                        <input type="text" id="stockSymbol" class="form-control" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Transaction Type</label>
+                        <select id="transactionType" class="form-select">
+                            <option value="buy">Buy</option>
+                            <option value="sell">Sell</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Quantity</label>
+                        <input type="number" step="0.01" id="stockQuantity" class="form-control" min="0.01" value="1">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Amount ($)</label>
+                        <input type="number" step="0.01" id="totalAmount" class="form-control">
+                    </div>
+                    <div class="alert alert-danger d-none" id="errorMessage" style="background: var(--danger-bg); border-color: rgba(239,68,68,0.2); color: var(--danger);"></div>
+                    <div class="alert alert-success d-none" id="successMessage" style="background: var(--success-bg); border-color: rgba(16,185,129,0.2); color: var(--success);"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-accent" id="confirmTransaction">Confirm Trade</button>
+            </div>
         </div>
     </div>
 </div>
@@ -142,169 +342,319 @@
 
 {% block extra_scripts %}
 <script>
-    // Plotly dark theme layout
-    const darkLayout = {
-        showlegend: true,
-        legend: {
-            orientation: 'h',
-            y: -0.15,
-            x: 0.5,
-            xanchor: 'center',
-            font: { size: 11, color: '#9CA3AF' }
-        },
-        xaxis: {
-            showgrid: true,
-            gridcolor: 'rgba(255,255,255,0.05)',
-            gridwidth: 1,
-            zeroline: false,
-            tickfont: { size: 11, color: '#6B7280' },
-            linecolor: 'rgba(255,255,255,0.08)'
-        },
-        yaxis: {
-            showgrid: true,
-            gridcolor: 'rgba(255,255,255,0.05)',
-            gridwidth: 1,
-            zeroline: false,
-            tickprefix: '$',
-            tickfont: { size: 11, color: '#6B7280' },
-            linecolor: 'rgba(255,255,255,0.08)'
-        },
-        plot_bgcolor: 'rgba(0,0,0,0)',
-        paper_bgcolor: 'rgba(0,0,0,0)',
-        margin: { t: 10, r: 20, b: 50, l: 70 },
-        hovermode: 'x unified',
-        hoverlabel: {
-            bgcolor: '#1F2937',
-            bordercolor: 'rgba(255,255,255,0.1)',
-            font: { color: '#F9FAFB', size: 12 }
+    var currentPrice = 0;
+    var buySellModal = new bootstrap.Modal(document.getElementById('buySellModal'));
+
+    // ============================
+    //  SPARKLINE SVG HELPER
+    // ============================
+    function buildSparklineSVG(prices, color) {
+        if (!prices || prices.length < 2) return '';
+
+        // Sample down to ~50 points for a clean sparkline
+        var step = Math.max(1, Math.floor(prices.length / 50));
+        var sampled = [];
+        for (var i = 0; i < prices.length; i += step) {
+            sampled.push(prices[i]);
         }
-    };
+        if (sampled[sampled.length - 1] !== prices[prices.length - 1]) {
+            sampled.push(prices[prices.length - 1]);
+        }
 
-    const plotlyConfig = {
-        displayModeBar: true,
-        displaylogo: false,
-        responsive: true,
-        modeBarButtonsToRemove: ['lasso2d', 'select2d']
-    };
+        var min = sampled[0], max = sampled[0];
+        for (var i = 1; i < sampled.length; i++) {
+            if (sampled[i] < min) min = sampled[i];
+            if (sampled[i] > max) max = sampled[i];
+        }
 
-    function updateMarketData() {
-        $.get('/get_market_indices', function(data) {
-            if (data.error) {
-                console.error('Error fetching market data:', data.error);
-                return;
-            }
-            updateMarketChart(data);
-            updateMarketSummary(data);
-        });
+        var range = max - min || 1;
+        var w = 200;
+        var h = 40;
+        var padding = 2;
+
+        var points = [];
+        for (var i = 0; i < sampled.length; i++) {
+            var x = (i / (sampled.length - 1)) * w;
+            var y = padding + ((max - sampled[i]) / range) * (h - padding * 2);
+            points.push(x.toFixed(1) + ',' + y.toFixed(1));
+        }
+
+        // Build gradient fill path
+        var fillPoints = points.join(' ') + ' ' + w + ',' + h + ' 0,' + h;
+
+        return '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">' +
+            '<defs><linearGradient id="grad-' + color.replace('#', '') + '" x1="0" y1="0" x2="0" y2="1">' +
+            '<stop offset="0%" stop-color="' + color + '" stop-opacity="0.3"/>' +
+            '<stop offset="100%" stop-color="' + color + '" stop-opacity="0.02"/>' +
+            '</linearGradient></defs>' +
+            '<polygon points="' + fillPoints + '" fill="url(#grad-' + color.replace('#', '') + ')"/>' +
+            '<polyline points="' + points.join(' ') + '" fill="none" stroke="' + color + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>' +
+            '</svg>';
     }
 
-    function updateMarketChart(data) {
-        const traces = Object.keys(data).map(symbol => ({
-            name: data[symbol].name,
-            x: data[symbol].dates,
-            y: data[symbol].prices,
-            type: 'scatter',
-            mode: 'lines',
-            line: {
-                color: data[symbol].color,
-                width: 2,
-                shape: 'spline'
+    // ============================
+    //  MARKET INDEX SPARKLINE CARDS
+    // ============================
+    function fetchMarketData() {
+        $.ajax({
+            url: '/get_market_indices',
+            data: { timeframe: '3M' },
+            dataType: 'json',
+            success: function(data) {
+                if (data.error) {
+                    showIndexError();
+                    return;
+                }
+                try {
+                    renderIndexCards(data);
+                } catch (e) {
+                    console.error('Index card render error:', e);
+                    showIndexError();
+                }
             },
-            hovertemplate:
-                `<b>${data[symbol].name}</b><br>` +
-                'Date: %{x}<br>' +
-                'Price: $%{y:.2f}<br>' +
-                '<extra></extra>'
-        }));
-
-        Plotly.newPlot('marketChart', traces, darkLayout, plotlyConfig);
-    }
-
-    function updateChart(timeframe) {
-        document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
-        event.target.classList.add('active');
-
-        $.get(`/get_market_indices?timeframe=${timeframe}`, function(data) {
-            if (data.error) {
-                console.error('Error fetching market data:', data.error);
-                return;
-            }
-            updateMarketChart(data);
-        });
-    }
-
-    function updateMarketSummary(data) {
-        const indexMap = {
-            'SPY': 'sp500',
-            'DIA': 'dowjones',
-            'QQQ': 'nasdaq',
-            'IWM': 'russell2000',
-            'VGK': 'ftseeurope',
-            'EEM': 'emergingmarkets'
-        };
-
-        Object.entries(data).forEach(([symbol, indexData]) => {
-            const elementId = indexMap[symbol];
-            if (elementId) {
-                document.getElementById(`${elementId}Price`).textContent = '$' + indexData.current_price.toFixed(2);
-
-                const changeEl = document.getElementById(`${elementId}Change`);
-                const isPositive = indexData.change >= 0;
-                const sign = isPositive ? '+' : '';
-                changeEl.textContent = `${sign}$${indexData.change.toFixed(2)} (${sign}${indexData.change_percent.toFixed(2)}%)`;
-                changeEl.style.color = isPositive ? 'var(--success)' : 'var(--danger)';
+            error: function() {
+                showIndexError();
             }
         });
     }
 
-    function updateMarketMovers() {
-        fetch('/get_market_movers')
-            .then(response => response.json())
-            .then(data => {
-                const gainersHtml = data.gainers && data.gainers.length ? data.gainers.map(stock => `
-                    <div class="mover-item">
-                        <div>
-                            <div class="mover-symbol">${stock.symbol}</div>
-                            <div class="mover-name">${stock.name}</div>
-                        </div>
-                        <div class="text-end">
-                            <div class="mover-price">$${stock.price.toFixed(2)}</div>
-                            <div class="mover-change text-success">+${stock.change.toFixed(2)}%</div>
-                        </div>
-                    </div>
-                `).join('') : '<div class="empty-state py-2"><p class="mb-0" style="font-size:0.85rem;">No gainers data</p></div>';
-
-                document.getElementById('topGainers').innerHTML = gainersHtml;
-
-                const losersHtml = data.losers && data.losers.length ? data.losers.map(stock => `
-                    <div class="mover-item">
-                        <div>
-                            <div class="mover-symbol">${stock.symbol}</div>
-                            <div class="mover-name">${stock.name}</div>
-                        </div>
-                        <div class="text-end">
-                            <div class="mover-price">$${stock.price.toFixed(2)}</div>
-                            <div class="mover-change text-danger">${stock.change.toFixed(2)}%</div>
-                        </div>
-                    </div>
-                `).join('') : '<div class="empty-state py-2"><p class="mb-0" style="font-size:0.85rem;">No losers data</p></div>';
-
-                document.getElementById('topLosers').innerHTML = losersHtml;
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                const errorHtml = '<div class="empty-state py-2"><p class="mb-0" style="font-size:0.85rem;">Error loading data</p></div>';
-                document.getElementById('topGainers').innerHTML = errorHtml;
-                document.getElementById('topLosers').innerHTML = errorHtml;
-            });
+    function showIndexError() {
+        var cards = document.querySelectorAll('.index-card');
+        for (var i = 0; i < cards.length; i++) {
+            var loading = cards[i].querySelector('.index-loading');
+            if (loading) {
+                loading.innerHTML = '<span style="font-size: 0.8rem; color: var(--text-muted);">Unavailable</span>';
+            }
+        }
     }
 
-    // Initialize
-    document.addEventListener('DOMContentLoaded', () => {
-        updateMarketData();
-        updateMarketMovers();
-        setInterval(updateMarketData, 300000);
-        setInterval(updateMarketMovers, 60000);
+    function renderIndexCards(data) {
+        var symbols = Object.keys(data);
+        for (var i = 0; i < symbols.length; i++) {
+            var sym = symbols[i];
+            var d = data[sym];
+            var card = document.getElementById('card-' + sym);
+            if (!card) continue;
+
+            var isPositive = d.change >= 0;
+            var sign = isPositive ? '+' : '';
+            var changeColor = isPositive ? 'var(--success)' : 'var(--danger)';
+            var sparkColor = isPositive ? '#10B981' : '#EF4444';
+
+            // Build the card content (keep the name, replace everything after it)
+            var html = '<div class="index-name">' + d.name + '</div>' +
+                '<div class="index-price">$' + d.current_price.toFixed(2) + '</div>' +
+                '<div class="index-change" style="color: ' + changeColor + ';">' +
+                    sign + '$' + d.change.toFixed(2) + ' (' + sign + d.change_percent.toFixed(2) + '%)' +
+                '</div>' +
+                '<div class="sparkline-wrap">' + buildSparklineSVG(d.prices, sparkColor) + '</div>';
+
+            card.innerHTML = html;
+        }
+    }
+
+    // ============================
+    //  HOLDINGS TABLE (real cost basis)
+    // ============================
+    function fetchHoldings() {
+        $.ajax({
+            url: '/get_dashboard_holdings',
+            dataType: 'json',
+            success: function(data) {
+                if (data.error) {
+                    document.getElementById('holdingsBody').innerHTML =
+                        '<tr><td colspan="7" class="text-center py-3" style="color: var(--text-muted);">Error loading holdings</td></tr>';
+                    return;
+                }
+
+                if (data.empty || !data.holdings || data.holdings.length === 0) {
+                    document.getElementById('holdingsBody').innerHTML =
+                        '<tr><td colspan="7" class="text-center py-4" style="color: var(--text-muted);">' +
+                        '<i class="fas fa-folder-open" style="font-size: 1.5rem; opacity: 0.4;"></i>' +
+                        '<p class="mt-2 mb-1">No holdings yet</p>' +
+                        '<a href="/stocks" style="font-size: 0.85rem;">Browse Stocks</a></td></tr>';
+                    document.getElementById('holdingsCount').textContent = '';
+                    document.getElementById('bestWorstContent').innerHTML = '<span style="color: var(--text-muted);">No holdings</span>';
+                    return;
+                }
+
+                var holdings = data.holdings;
+                document.getElementById('holdingsCount').textContent = holdings.length + ' stock' + (holdings.length !== 1 ? 's' : '');
+
+                var rows = '';
+                for (var i = 0; i < holdings.length; i++) {
+                    var h = holdings[i];
+                    var isPos = h.gain_loss >= 0;
+                    rows +=
+                        '<tr>' +
+                        '<td><div style="font-weight:600;color:var(--accent);">' + h.symbol + '</div>' +
+                        '<div style="font-size:0.75rem;color:var(--text-muted);">' + h.name + '</div></td>' +
+                        '<td style="font-weight:600;">' + h.quantity + '</td>' +
+                        '<td>$' + h.avg_cost.toFixed(2) + '</td>' +
+                        '<td>$' + h.current_price.toFixed(2) + '</td>' +
+                        '<td style="font-weight:600;">$' + h.current_value.toFixed(2) + '</td>' +
+                        '<td><span class="perf-badge ' + (isPos ? 'positive' : 'negative') + '">' +
+                            (isPos ? '+' : '') + '$' + h.gain_loss.toFixed(2) + ' (' + (isPos ? '+' : '') + h.gain_loss_pct.toFixed(2) + '%)</span></td>' +
+                        '<td><div class="d-flex gap-2">' +
+                        '<button class="btn btn-success-dark btn-sm" onclick="openTrade(\'' + h.symbol + '\',\'buy\')">Buy</button>' +
+                        '<button class="btn btn-danger-dark btn-sm" onclick="openTrade(\'' + h.symbol + '\',\'sell\')">Sell</button>' +
+                        '</div></td></tr>';
+                }
+                document.getElementById('holdingsBody').innerHTML = rows;
+
+                // Best / Worst performer
+                var best = holdings[0], worst = holdings[0];
+                for (var i = 1; i < holdings.length; i++) {
+                    if (holdings[i].gain_loss_pct > best.gain_loss_pct) best = holdings[i];
+                    if (holdings[i].gain_loss_pct < worst.gain_loss_pct) worst = holdings[i];
+                }
+                var bestCol = best.gain_loss_pct >= 0 ? 'var(--success)' : 'var(--danger)';
+                var worstCol = worst.gain_loss_pct >= 0 ? 'var(--success)' : 'var(--danger)';
+                document.getElementById('bestWorstContent').innerHTML =
+                    '<div class="d-flex justify-content-between">' +
+                    '<span><b style="color:' + bestCol + ';">' + best.symbol + '</b> <span style="color:' + bestCol + ';">' + (best.gain_loss_pct >= 0 ? '+' : '') + best.gain_loss_pct.toFixed(2) + '%</span></span>' +
+                    '<span><b style="color:' + worstCol + ';">' + worst.symbol + '</b> <span style="color:' + worstCol + ';">' + (worst.gain_loss_pct >= 0 ? '+' : '') + worst.gain_loss_pct.toFixed(2) + '%</span></span>' +
+                    '</div>';
+            },
+            error: function() {
+                document.getElementById('holdingsBody').innerHTML =
+                    '<tr><td colspan="7" class="text-center py-3" style="color: var(--text-muted);">Error loading holdings</td></tr>';
+            }
+        });
+    }
+
+    // ============================
+    //  TRADE MODAL
+    // ============================
+    function openTrade(symbol, type) {
+        $('#stockSymbol').val(symbol);
+        $('#transactionType').val(type);
+        $('#stockQuantity').val(1);
+        $('#errorMessage').addClass('d-none');
+        $('#successMessage').addClass('d-none');
+        $('#buySellModal .modal-footer').show();
+        $('#txOverlay').remove();
+
+        $.ajax({
+            url: '/get_stock_price/' + symbol,
+            method: 'GET',
+            success: function(response) {
+                currentPrice = parseFloat(response.price);
+                $('#totalAmount').val(currentPrice.toFixed(2));
+            },
+            error: function() {
+                $('#errorMessage').text('Error fetching stock price').removeClass('d-none');
+            }
+        });
+
+        buySellModal.show();
+    }
+
+    $('#stockQuantity').on('input', function() {
+        var qty = parseFloat($(this).val());
+        if (!isNaN(qty)) $('#totalAmount').val((qty * currentPrice).toFixed(2));
+    });
+    $('#totalAmount').on('input', function() {
+        var amt = parseFloat($(this).val());
+        if (!isNaN(amt) && currentPrice > 0) $('#stockQuantity').val((amt / currentPrice).toFixed(2));
+    });
+
+    $('#confirmTransaction').click(function() {
+        var symbol = $('#stockSymbol').val();
+        var transactionType = $('#transactionType').val();
+        var quantity = parseFloat($('#stockQuantity').val());
+        var amount = parseFloat($('#totalAmount').val());
+
+        if (isNaN(quantity) || isNaN(amount) || quantity <= 0 || amount <= 0) {
+            $('#errorMessage').text('Invalid quantity or amount.').removeClass('d-none');
+            $('#successMessage').addClass('d-none');
+            return;
+        }
+
+        var modalBody = document.querySelector('#buySellModal .modal-body');
+        showTxProcessing(modalBody);
+        $('#buySellModal .modal-footer').hide();
+
+        $.ajax({
+            url: '/process_transaction',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ symbol: symbol, transaction_type: transactionType, quantity: quantity, amount: amount }),
+            success: function(response) {
+                if (response.error) {
+                    showTxResult(modalBody, false, response.error);
+                    setTimeout(function() { $('#txOverlay').remove(); $('#buySellModal .modal-footer').show(); }, 2000);
+                } else {
+                    var msg = transactionType === 'buy' ? 'Buy order confirmed!' : 'Sell order confirmed!';
+                    showTxResult(modalBody, true, msg);
+                    setTimeout(function() { location.reload(); }, 1800);
+                }
+            },
+            error: function() {
+                showTxResult(modalBody, false, 'Transaction failed');
+                setTimeout(function() { $('#txOverlay').remove(); $('#buySellModal .modal-footer').show(); }, 2000);
+            }
+        });
+    });
+
+    // ============================
+    //  SECTOR ALLOCATION DONUT
+    // ============================
+    function updateSectorChart() {
+        $.ajax({
+            url: '/get_portfolio_analytics',
+            dataType: 'json',
+            success: function(data) {
+                if (data.error || !data.sector_distribution || Object.keys(data.sector_distribution).length === 0) {
+                    document.getElementById('sectorChart').classList.add('d-none');
+                    document.getElementById('sectorEmpty').classList.remove('d-none');
+                    return;
+                }
+
+                document.getElementById('sectorChart').classList.remove('d-none');
+                document.getElementById('sectorEmpty').classList.add('d-none');
+
+                var sectors = Object.keys(data.sector_distribution);
+                var values = Object.values(data.sector_distribution);
+                var sectorColors = ['#8B5CF6','#2E86DE','#10AC84','#FF6B6B','#FFD93D','#A8E6CF','#5758BB','#F59E0B','#EC4899','#14B8A6','#F97316','#6366F1'];
+
+                Plotly.newPlot('sectorChart', [{
+                    labels: sectors,
+                    values: values,
+                    type: 'pie',
+                    hole: 0.55,
+                    textinfo: 'percent',
+                    textposition: 'outside',
+                    textfont: { size: 11, color: '#9CA3AF' },
+                    hovertemplate: '<b>%{label}</b><br>%{value:.1f}%<extra></extra>',
+                    marker: { colors: sectorColors.slice(0, sectors.length), line: { color: '#111827', width: 2 } },
+                    showlegend: true
+                }], {
+                    showlegend: true,
+                    legend: { orientation: 'h', y: -0.15, x: 0.5, xanchor: 'center', font: { size: 10, color: '#9CA3AF' } },
+                    plot_bgcolor: 'rgba(0,0,0,0)',
+                    paper_bgcolor: 'rgba(0,0,0,0)',
+                    margin: { t: 10, r: 10, b: 30, l: 10 },
+                    hoverlabel: { bgcolor: '#1F2937', bordercolor: 'rgba(255,255,255,0.1)', font: { color: '#F9FAFB', size: 12 } }
+                }, { displayModeBar: false, responsive: true });
+            },
+            error: function() {
+                document.getElementById('sectorChart').classList.add('d-none');
+                document.getElementById('sectorEmpty').classList.remove('d-none');
+            }
+        });
+    }
+
+    // ============================
+    //  INIT
+    // ============================
+    document.addEventListener('DOMContentLoaded', function() {
+        fetchMarketData();
+        fetchHoldings();
+        updateSectorChart();
+        setInterval(fetchMarketData, 300000);
+        setInterval(fetchHoldings, 300000);
+        setInterval(updateSectorChart, 300000);
     });
 </script>
 {% endblock %}
