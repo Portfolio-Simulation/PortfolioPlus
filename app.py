@@ -706,6 +706,69 @@ def get_market_indices():
 
 
 
+@app.route('/get_dashboard_holdings')
+def get_dashboard_holdings():
+    """Return current holdings with real cost basis computed from transactions."""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Not logged in'}), 401
+
+    try:
+        user_id = session['user_id']
+        cursor = get_db().cursor()
+
+        # Get current holdings
+        cursor.execute("SELECT stock_symbol, quantity FROM portfolios WHERE user_id = %s", (user_id,))
+        holdings = cursor.fetchall()
+
+        if not holdings:
+            return jsonify({'empty': True, 'holdings': []})
+
+        # For each holding, compute average cost from buy transactions
+        result = []
+        for symbol, quantity in holdings:
+            # Sum total spent on buys and total shares bought
+            cursor.execute("""
+                SELECT COALESCE(SUM(price), 0), COALESCE(SUM(quantity), 0)
+                FROM transactions
+                WHERE user_id = %s AND stock_symbol = %s AND transaction_type = 'buy'
+            """, (user_id, symbol))
+            total_spent, total_bought = cursor.fetchone()
+            total_spent = float(total_spent)
+            total_bought = float(total_bought)
+
+            avg_cost_per_share = (total_spent / total_bought) if total_bought > 0 else 0
+
+            # Get current price
+            quote = finnhub_get('/quote', {'symbol': symbol})
+            current_price = quote.get('c', 0)
+
+            # Get company name
+            profile = finnhub_get('/stock/profile2', {'symbol': symbol})
+            company_name = profile.get('name', symbol)
+
+            current_value = current_price * quantity
+            cost_basis = avg_cost_per_share * quantity
+            gain_loss = current_value - cost_basis
+            gain_loss_pct = ((gain_loss / cost_basis) * 100) if cost_basis > 0 else 0
+
+            result.append({
+                'symbol': symbol,
+                'name': company_name,
+                'quantity': quantity,
+                'current_price': round(current_price, 2),
+                'current_value': round(current_value, 2),
+                'avg_cost': round(avg_cost_per_share, 2),
+                'cost_basis': round(cost_basis, 2),
+                'gain_loss': round(gain_loss, 2),
+                'gain_loss_pct': round(gain_loss_pct, 2)
+            })
+
+        return jsonify({'empty': False, 'holdings': result})
+    except Exception as e:
+        print(f"Error fetching dashboard holdings: {str(e)}")
+        return jsonify({'error': 'Failed to fetch holdings data'}), 500
+
+
 @app.route('/check_username', methods=['POST'])
 def check_username():
     data = request.get_json()  # Use get_json() to parse JSON data
