@@ -4,7 +4,7 @@
 {% block title %}Stocks | Portfolio+{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex justify-content-between align-items-center mb-3">
     <h4 class="mb-0" style="font-weight: 700;">
         <i class="fas fa-chart-line text-accent me-2"></i>Stock Market
     </h4>
@@ -13,25 +13,54 @@
     </span>
 </div>
 
+<!-- Top bar: count, search, filters -->
+<div class="card mb-4">
+    <div class="card-body py-3">
+        <div class="d-flex flex-wrap align-items-center gap-3">
+            <span class="text-secondary" style="font-size: 0.85rem;">
+                <span id="stockCount">{{ stocks|length if stocks else 0 }}</span> stocks
+            </span>
+            <input type="text" id="stocksSearch" class="form-control form-control-sm stocks-search-input flex-grow-1" placeholder="Search symbol or company..." style="min-width: 200px; max-width: 420px;">
+            <div class="d-flex align-items-center gap-2 flex-wrap stocks-filter-group">
+                <select id="sectorFilter" class="form-select form-select-sm stocks-filter" title="Sector">
+                    <option value="">All sectors</option>
+                    {% for s in unique_sectors if s %}
+                    <option value="{{ s }}">{{ s }}</option>
+                    {% endfor %}
+                </select>
+                <select id="marketCapFilter" class="form-select form-select-sm stocks-filter" title="Market cap">
+                    <option value="">All market caps</option>
+                    {% for m in unique_market_caps if m %}
+                    <option value="{{ m }}">{{ m }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="card">
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover mb-0">
+            <table class="table table-hover mb-0" id="stocksTable">
                 <thead>
                     <tr>
-                        <th>Symbol</th>
-                        <th>Company</th>
+                        <th class="stocks-sortable" data-sort="symbol">Symbol <i class="fas fa-sort text-muted ms-1" style="font-size: 0.7rem;"></i></th>
+                        <th class="stocks-sortable" data-sort="company">Company <i class="fas fa-sort text-muted ms-1" style="font-size: 0.7rem;"></i></th>
                         <th>Prev Close</th>
-                        <th>Price</th>
-                        <th>Change</th>
-                        <th>Volume</th>
+                        <th class="stocks-sortable" data-sort="price">Price <i class="fas fa-sort text-muted ms-1" style="font-size: 0.7rem;"></i></th>
+                        <th class="stocks-sortable" data-sort="change">Change <i class="fas fa-sort text-muted ms-1" style="font-size: 0.7rem;"></i></th>
+                        <th class="stocks-sortable" data-sort="sector">Sector <i class="fas fa-sort text-muted ms-1" style="font-size: 0.7rem;"></i></th>
+                        <th class="stocks-sortable" data-sort="market-cap">Market cap <i class="fas fa-sort text-muted ms-1" style="font-size: 0.7rem;"></i></th>
+                        <th>Held</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="stocksTableBody">
                     {% if stocks %}
                         {% for stock in stocks %}
-                        <tr>
+                        {% set qty = holdings.get(stock.symbol, 0) if holdings is defined else 0 %}
+                        <tr class="stock-row" data-symbol="{{ stock.symbol }}" data-company="{{ stock.company_name|lower }}" data-sector="{{ stock.sector or 'N/A' }}" data-market-cap="{{ stock.market_cap or 'N/A' }}" data-price="{{ stock.current_price }}" data-change="{{ stock.percent_change }}">
                             <td>
                                 <a href="#" class="stock-symbol-link" data-symbol="{{ stock.symbol }}">{{ stock.symbol }}</a>
                             </td>
@@ -43,7 +72,19 @@
                                     {% if stock.gain_loss >= 0 %}+{% endif %}{{ stock.gain_loss }} ({{ stock.percent_change }}%)
                                 </span>
                             </td>
-                            <td style="color: var(--text-muted);">{{ '{:,.0f}'.format(stock.volume) }}</td>
+                            <td>
+                                <span class="badge bg-accent-subtle text-accent" style="border: 1px solid rgba(139,92,246,0.2); font-weight: 500; font-size: 0.75rem;">{{ stock.sector or 'N/A' }}</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-accent-subtle text-accent" style="border: 1px solid rgba(139,92,246,0.2); font-weight: 500; font-size: 0.75rem;">{{ stock.market_cap or 'N/A' }}</span>
+                            </td>
+                            <td>
+                                {% if qty and qty > 0 %}
+                                <span class="portfolio-holding-badge">{{ qty }} share{{ 's' if qty != 1 else '' }}</span>
+                                {% else %}
+                                <span class="text-muted" style="font-size: 0.8rem;">—</span>
+                                {% endif %}
+                            </td>
                             <td>
                                 <div class="d-flex align-items-center gap-2">
                                     <button class="btn btn-success-dark btn-sm buy-btn" data-symbol="{{ stock.symbol }}">Buy</button>
@@ -56,7 +97,7 @@
                         {% endfor %}
                     {% else %}
                         <tr>
-                            <td colspan="7">
+                            <td colspan="9">
                                 <div class="empty-state">
                                     <i class="fas fa-chart-bar"></i>
                                     <p>No stocks available at the moment</p>
@@ -135,8 +176,8 @@
         const buySellModal = new bootstrap.Modal(document.getElementById('buySellModal'));
         const stockDetailsModal = new bootstrap.Modal(document.getElementById('stockDetailsModal'));
 
-        // Stock detail chart
-        $('.stock-symbol-link').click(function(e) {
+        // Stock detail chart (delegated for dynamically added rows)
+        $(document).on('click', '.stock-symbol-link', function(e) {
             e.preventDefault();
             const symbol = $(this).data('symbol');
             const companyName = $(this).text();
@@ -213,12 +254,12 @@
             });
         });
 
-        // Buy/Sell
+        // Buy/Sell (delegated for dynamically added rows)
         let currentPrice = 0;
 
-        $('.buy-btn, .sell-btn').click(function() {
+        $(document).on('click', '.buy-btn, .sell-btn', function() {
             const symbol = $(this).data('symbol');
-            currentPrice = parseFloat($(this).closest('tr').find('td:eq(3)').text().replace('$', ''));
+            currentPrice = parseFloat($(this).closest('tr').find('td:eq(3)').text().replace(/\$/g, '').replace(/,/g, ''));
             const transactionType = $(this).hasClass('buy-btn') ? 'buy' : 'sell';
 
             $('#stockSymbol').val(symbol);
@@ -282,8 +323,8 @@
             });
         });
 
-        // Watchlist toggle
-        $('.watchlist-icon').click(function() {
+        // Watchlist toggle (delegated for dynamically added rows)
+        $(document).on('click', '.watchlist-icon', function() {
             const icon = $(this);
             const symbol = icon.data('symbol');
 
@@ -300,6 +341,87 @@
                 error: function() {
                     console.error('Error updating watchlist');
                 }
+            });
+        });
+
+        // --- Search filter ---
+        $('#stocksSearch').on('input', function() {
+            var q = $(this).val().toLowerCase().trim();
+            applyFilters();
+        });
+
+        $('#sectorFilter, #marketCapFilter').on('change', function() {
+            applyFilters();
+        });
+
+        function applyFilters() {
+            var searchQ = $('#stocksSearch').val().toLowerCase().trim();
+            var sectorVal = $('#sectorFilter').val();
+            var marketCapVal = $('#marketCapFilter').val();
+            var visible = 0;
+            $('.stock-row').each(function() {
+                var row = $(this);
+                var symbol = (row.data('symbol') || '').toLowerCase();
+                var company = row.data('company') || '';
+                var sector = row.data('sector') || '';
+                var marketCap = row.data('market-cap') || '';
+                var matchSearch = !searchQ || symbol.indexOf(searchQ) !== -1 || company.indexOf(searchQ) !== -1;
+                var matchSector = !sectorVal || sector === sectorVal;
+                var matchMarketCap = !marketCapVal || marketCap === marketCapVal;
+                if (matchSearch && matchSector && matchMarketCap) {
+                    row.show();
+                    visible++;
+                } else {
+                    row.hide();
+                }
+            });
+            $('#stockCount').text(visible);
+        }
+
+        // --- Sortable columns ---
+        var sortCol = null;
+        var sortDir = 1;
+
+        $('#stocksTable thead th.stocks-sortable').on('click', function() {
+            var col = $(this).data('sort');
+            if (sortCol === col) sortDir = -sortDir; else sortDir = 1;
+            sortCol = col;
+
+            var rows = $('#stocksTableBody tr.stock-row').get();
+            rows.sort(function(a, b) {
+                var aVal, bVal;
+                var $a = $(a), $b = $(b);
+                switch (col) {
+                    case 'symbol':
+                        aVal = $a.data('symbol');
+                        bVal = $b.data('symbol');
+                        return sortDir * (aVal < bVal ? -1 : aVal > bVal ? 1 : 0);
+                    case 'company':
+                        aVal = ($a.data('company') || '').toLowerCase();
+                        bVal = ($b.data('company') || '').toLowerCase();
+                        return sortDir * (aVal < bVal ? -1 : aVal > bVal ? 1 : 0);
+                    case 'price':
+                        aVal = parseFloat($a.data('price'));
+                        bVal = parseFloat($b.data('price'));
+                        return sortDir * (aVal - bVal);
+                    case 'change':
+                        aVal = parseFloat($a.data('change'));
+                        bVal = parseFloat($b.data('change'));
+                        return sortDir * (aVal - bVal);
+                    case 'sector':
+                        aVal = ($a.data('sector') || '').toLowerCase();
+                        bVal = ($b.data('sector') || '').toLowerCase();
+                        return sortDir * (aVal < bVal ? -1 : aVal > bVal ? 1 : 0);
+                    case 'market-cap':
+                        aVal = ($a.data('market-cap') || '').toLowerCase();
+                        bVal = ($b.data('market-cap') || '').toLowerCase();
+                        return sortDir * (aVal < bVal ? -1 : aVal > bVal ? 1 : 0);
+                    default:
+                        return 0;
+                }
+            });
+            $.each(rows, function(i, row) {
+                $('#stocksTableBody').append(row);
             });
         });
     });

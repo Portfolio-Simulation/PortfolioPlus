@@ -970,3 +970,40 @@ a:hover {
 .bg-accent-subtle { background: var(--accent-subtle) !important; }
 .border-accent { border-color: rgba(139, 92, 246, 0.3) !important; }
 .glow-accent { box-shadow: var(--shadow-accent) !important; }
+
+/* --- Stocks Page --- */
+.stocks-search-input,
+.stocks-filter {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    border-radius: var(--radius-sm);
+}
+.stocks-search-input:focus,
+.stocks-filter:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-subtle);
+}
+.stocks-filter {
+    cursor: pointer;
+    min-width: 140px;
+}
+.stocks-filter-group {
+    margin-left: auto;
+}
+.stocks-sortable {
+    cursor: pointer;
+    user-select: none;
+}
+.stocks-sortable:hover {
+    color: var(--accent);
+}
+.portfolio-holding-badge {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-sm);
+    background: var(--accent-subtle);
+    color: var(--accent);
+}

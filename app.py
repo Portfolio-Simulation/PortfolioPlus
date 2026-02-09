@@ -4,6 +4,7 @@ import psycopg2.extras
 import os
 import time
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests as http_requests
 from dotenv import load_dotenv
 from decimal import Decimal
@@ -18,6 +19,9 @@ FINNHUB_BASE = 'https://finnhub.io/api/v1'
 # Simple in-memory cache (key -> (timestamp, data)) with 5-min TTL
 _cache = {}
 CACHE_TTL = 300  # 5 minutes
+
+# Parallel fetch: max concurrent requests to Finnhub (avoids one-by-one slowness)
+STOCKS_FETCH_WORKERS = 15
 
 def finnhub_get(endpoint, params=None):
     """Make a cached GET request to Finnhub API."""
@@ -157,37 +161,75 @@ def init_db():
 # Initialize database tables and seed data on startup
 init_db()
 
-# Function to fetch stock data using Finnhub API
+def _market_cap_bucket(market_cap_usd):
+    """Bucket market cap (USD) into Large / Mid / Small / Micro."""
+    if market_cap_usd is None or market_cap_usd <= 0:
+        return 'N/A'
+    if market_cap_usd >= 10e9:
+        return 'Large cap'
+    if market_cap_usd >= 2e9:
+        return 'Mid cap'
+    if market_cap_usd >= 300e6:
+        return 'Small cap'
+    return 'Micro cap'
+
+
+def _fetch_one_stock(symbol, watchlist_symbols=None):
+    """Fetch quote + profile for one symbol; return dict or None. Used in parallel."""
+    try:
+        quote = finnhub_get('/quote', {'symbol': symbol})
+        profile = finnhub_get('/stock/profile2', {'symbol': symbol})
+
+        current_price = quote.get('c', 0)
+        prev_price = quote.get('pc', 0)
+
+        if not current_price or not prev_price or prev_price == 0:
+            return None
+
+        gain_loss = round(current_price - prev_price, 2)
+        percent_change = round((gain_loss / prev_price) * 100, 2)
+        company_name = profile.get('name', symbol)
+        sector = profile.get('finnhubIndustry') or 'N/A'
+
+        market_cap_usd = profile.get('marketCapitalization')
+        if market_cap_usd is None and current_price:
+            shares = profile.get('shareOutstanding')
+            if shares is not None:
+                market_cap_usd = current_price * shares
+        if market_cap_usd and 0 < market_cap_usd < 1e7:
+            market_cap_usd = market_cap_usd * 1e6
+        market_cap = _market_cap_bucket(market_cap_usd) if market_cap_usd else 'N/A'
+
+        return {
+            'symbol': symbol,
+            'company_name': company_name,
+            'prev_price': round(prev_price, 2),
+            'current_price': round(current_price, 2),
+            'gain_loss': gain_loss,
+            'percent_change': percent_change,
+            'sector': sector,
+            'market_cap': market_cap,
+            'in_watchlist': (symbol in watchlist_symbols) if watchlist_symbols else False
+        }
+    except Exception as e:
+        print(f"Error fetching data for {symbol}: {str(e)}")
+        return None
+
+
 def fetch_stock_data(stock_symbols, watchlist_symbols=None):
+    """Fetch stock data for all symbols in parallel for much faster load."""
     stocks_data = []
-    for symbol in stock_symbols:
-        try:
-            quote = finnhub_get('/quote', {'symbol': symbol})
-            profile = finnhub_get('/stock/profile2', {'symbol': symbol})
-
-            current_price = quote.get('c', 0)
-            prev_price = quote.get('pc', 0)
-
-            if not current_price or not prev_price or prev_price == 0:
-                continue
-
-            gain_loss = round(current_price - prev_price, 2)
-            percent_change = round((gain_loss / prev_price) * 100, 2)
-            company_name = profile.get('name', symbol)
-
-            stocks_data.append({
-                'symbol': symbol,
-                'company_name': company_name,
-                'prev_price': round(prev_price, 2),
-                'current_price': round(current_price, 2),
-                'gain_loss': gain_loss,
-                'percent_change': percent_change,
-                'volume': 0,
-                'in_watchlist': (symbol in watchlist_symbols) if watchlist_symbols else False
-            })
-        except Exception as e:
-            print(f"Error fetching data for {symbol}: {str(e)}")
-            continue
+    watchlist_symbols = watchlist_symbols or set()
+    max_workers = min(STOCKS_FETCH_WORKERS, len(stock_symbols)) or 1
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_to_symbol = {
+            executor.submit(_fetch_one_stock, sym, watchlist_symbols): sym
+            for sym in stock_symbols
+        }
+        for future in as_completed(future_to_symbol):
+            result = future.result()
+            if result is not None:
+                stocks_data.append(result)
     return stocks_data
 
 @app.route('/')
@@ -281,22 +323,20 @@ def dashboard():
                            first_name=first_name, portfolio_value=portfolio_value)
 
 def get_all_stocks():
+    """Top ~100 US stocks (large/mid cap, liquid names)."""
     return [
-        'GOOGL',  # Alphabet
-        'AAPL',   # Apple
-        'AMZN',   # Amazon
-        'BAC',    # Bank of America
-        'DIS',    # Disney
-        'JNJ',    # Johnson & Johnson
-        'JPM',    # JPMorgan Chase
-        'META',   # Meta
-        'MSFT',   # Microsoft
-        'NFLX',   # Netflix
-        'NVDA',   # NVIDIA
-        'TSLA',   # Tesla
-        'UNH',    # UnitedHealth
-        'V',      # Visa
-        'WMT',    # Walmart
+        'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'BRK.B', 'TSLA', 'JPM', 'V',
+        'UNH', 'JNJ', 'WMT', 'XOM', 'PG', 'MA', 'HD', 'CVX', 'ABBV', 'MRK',
+        'PEP', 'KO', 'COST', 'LLY', 'AVGO', 'MCD', 'ABT', 'DHR', 'TMO', 'ACN',
+        'NEE', 'WFC', 'DIS', 'PM', 'BMY', 'CSCO', 'ADBE', 'CRM', 'NKE', 'VZ',
+        'TXN', 'CMCSA', 'NFLX', 'AMD', 'INTC', 'QCOM', 'HON', 'AMGN', 'RTX',
+        'INTU', 'AMAT', 'SBUX', 'AXP', 'LOW', 'BKNG', 'GILD', 'MDLZ', 'ADI',
+        'LMT', 'REGN', 'C', 'BLK', 'DE', 'SYK', 'CVS', 'GS', 'CAT', 'BA',
+        'PLD', 'ISRG', 'VRTX', 'MO', 'MMC', 'ZTS', 'CB', 'SO', 'DUK', 'BDX',
+        'BSX', 'EOG', 'SLB', 'CL', 'EQIX', 'ITW', 'APD', 'SHW', 'MCK', 'APTV',
+        'PSA', 'ORLY', 'AON', 'SNPS', 'CDNS', 'KLAC', 'WM', 'CME', 'ICE',
+        'MNST', 'CTAS', 'MAR', 'AIG', 'ECL', 'NXPI', 'A', 'HCA', 'TT', 'FIS',
+        'GE', 'SPGI', 'PGR', 'AJG', 'MET', 'IQV', 'APH', 'ROST', 'TRP', 'HLT',
     ]
  
 
@@ -373,10 +413,19 @@ def stocks():
     cursor.execute("SELECT stock_symbol FROM watchlist WHERE user_id = %s", (user_id,))
     watchlist_symbols = {row[0] for row in cursor.fetchall()}
     cursor.execute("SELECT wallet_balance FROM users WHERE user_id = %s", (user_id,))
-    wallet_balance = cursor.fetchone()[0]  
+    wallet_balance = cursor.fetchone()[0]
+    cursor.execute("SELECT stock_symbol, quantity FROM portfolios WHERE user_id = %s", (user_id,))
+    holdings = {row[0]: row[1] for row in cursor.fetchall()}
 
     stocks_data = fetch_stock_data(stock_symbols, watchlist_symbols)
-    return render_template('stocks.html', stocks=stocks_data, wallet_balance=wallet_balance)
+    unique_sectors = sorted({s.get('sector') or 'N/A' for s in stocks_data})
+    _cap_order = {'Large cap': 0, 'Mid cap': 1, 'Small cap': 2, 'Micro cap': 3, 'N/A': 4}
+    unique_market_caps = sorted(
+        {s.get('market_cap') or 'N/A' for s in stocks_data},
+        key=lambda x: (_cap_order.get(x, 5), x)
+    )
+    return render_template('stocks.html', stocks=stocks_data, wallet_balance=wallet_balance, holdings=holdings,
+                          unique_sectors=unique_sectors, unique_market_caps=unique_market_caps)
 
 @app.route('/get_stock_history/<symbol>')
 def get_stock_history(symbol):
