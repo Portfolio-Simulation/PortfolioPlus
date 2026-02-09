@@ -21,20 +21,11 @@
                 <span id="stockCount">{{ stocks|length if stocks else 0 }}</span> stocks
             </span>
             <input type="text" id="stocksSearch" class="form-control form-control-sm stocks-search-input flex-grow-1" placeholder="Search symbol or company..." style="min-width: 200px; max-width: 420px;">
-            <div class="d-flex align-items-center gap-2 flex-wrap stocks-filter-group">
-                <select id="sectorFilter" class="form-select form-select-sm stocks-filter" title="Sector">
-                    <option value="">All sectors</option>
-                    {% for s in unique_sectors if s %}
-                    <option value="{{ s }}">{{ s }}</option>
-                    {% endfor %}
-                </select>
-                <select id="marketCapFilter" class="form-select form-select-sm stocks-filter" title="Market cap">
-                    <option value="">All market caps</option>
-                    {% for m in unique_market_caps if m %}
-                    <option value="{{ m }}">{{ m }}</option>
-                    {% endfor %}
-                </select>
-            </div>
+            <button class="btn btn-sm stocks-filter-btn" type="button" data-bs-toggle="offcanvas" data-bs-target="#stocksFiltersOffcanvas" aria-controls="stocksFiltersOffcanvas" title="Filter by sector and market cap">
+                <i class="fas fa-sliders-h me-1"></i>
+                <span>Filters</span>
+                <span id="filterBadge" class="filter-badge d-none">0</span>
+            </button>
         </div>
     </div>
 </div>
@@ -107,6 +98,57 @@
                     {% endif %}
                 </tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+<!-- Filters slide-out panel (only visible when opened) -->
+<div class="offcanvas offcanvas-end stocks-filters-offcanvas" id="stocksFiltersOffcanvas" tabindex="-1" aria-labelledby="filtersOffcanvasTitle">
+    <div class="offcanvas-header border-bottom border-secondary">
+        <h5 class="offcanvas-title" id="filtersOffcanvasTitle">
+            <i class="fas fa-filter text-accent me-2"></i>Filter stocks
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body p-0">
+        <p class="px-3 pt-2 mb-0 text-muted small">Select sectors and market caps, then click Apply. Leave all unchecked to show everything.</p>
+        <div class="filter-sections">
+            <div class="filter-section">
+                <button type="button" class="filter-section-toggle" aria-expanded="false" data-section="marketcap">
+                    <i class="fas fa-chevron-down filter-section-chevron"></i>
+                    <span>Market cap</span>
+                </button>
+                <div class="filter-section-body closed">
+                    {% for m in unique_market_caps if m %}
+                    <label class="filter-option">
+                        <input type="checkbox" class="filter-cb filter-cb-marketcap" value="{{ m }}">
+                        <span>{{ m }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="filter-section">
+                <button type="button" class="filter-section-toggle" aria-expanded="false" data-section="sector">
+                    <i class="fas fa-chevron-down filter-section-chevron"></i>
+                    <span>Sector</span>
+                </button>
+                <div class="filter-section-body closed">
+                    {% for s in unique_sectors if s %}
+                    <label class="filter-option">
+                        <input type="checkbox" class="filter-cb filter-cb-sector" value="{{ s }}">
+                        <span>{{ s }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        <div class="filter-footer border-top border-secondary">
+            <button type="button" class="btn btn-sm btn-accent w-100 mb-2" id="filterApplyBtn">
+                <i class="fas fa-check me-1"></i>Apply filters
+            </button>
+            <button type="button" class="btn btn-sm btn-ghost w-100" id="filterClearBtn">
+                <i class="fas fa-times me-1"></i>Clear all filters
+            </button>
         </div>
     </div>
 </div>
@@ -350,14 +392,52 @@
             applyFilters();
         });
 
-        $('#sectorFilter, #marketCapFilter').on('change', function() {
+        function getSelectedSectors() {
+            var out = [];
+            $('.filter-cb-sector:checked').each(function() { out.push($(this).val()); });
+            return out;
+        }
+        function getSelectedMarketCaps() {
+            var out = [];
+            $('.filter-cb-marketcap:checked').each(function() { out.push($(this).val()); });
+            return out;
+        }
+        function updateFilterBadge() {
+            var n = getSelectedSectors().length + getSelectedMarketCaps().length;
+            var $badge = $('#filterBadge');
+            if (n > 0) {
+                $badge.text(n).removeClass('d-none');
+            } else {
+                $badge.addClass('d-none');
+            }
+        }
+
+        $('#filterApplyBtn').on('click', function() {
             applyFilters();
+            updateFilterBadge();
+            var offcanvasEl = document.getElementById('stocksFiltersOffcanvas');
+            var offcanvas = bootstrap.Offcanvas.getInstance(offcanvasEl);
+            if (offcanvas) offcanvas.hide();
+        });
+
+        $('#filterClearBtn').on('click', function() {
+            $('.filter-cb').prop('checked', false);
+            applyFilters();
+            updateFilterBadge();
+        });
+
+        $(document).on('click', '.filter-section-toggle', function() {
+            var $btn = $(this);
+            var $body = $btn.closest('.filter-section').find('.filter-section-body');
+            var open = $btn.attr('aria-expanded') === 'true';
+            $btn.attr('aria-expanded', !open);
+            $body.toggleClass('closed', open);
         });
 
         function applyFilters() {
             var searchQ = $('#stocksSearch').val().toLowerCase().trim();
-            var sectorVal = $('#sectorFilter').val();
-            var marketCapVal = $('#marketCapFilter').val();
+            var selectedSectors = getSelectedSectors();
+            var selectedMarketCaps = getSelectedMarketCaps();
             var visible = 0;
             $('.stock-row').each(function() {
                 var row = $(this);
@@ -366,8 +446,8 @@
                 var sector = row.data('sector') || '';
                 var marketCap = row.data('market-cap') || '';
                 var matchSearch = !searchQ || symbol.indexOf(searchQ) !== -1 || company.indexOf(searchQ) !== -1;
-                var matchSector = !sectorVal || sector === sectorVal;
-                var matchMarketCap = !marketCapVal || marketCap === marketCapVal;
+                var matchSector = selectedSectors.length === 0 || selectedSectors.indexOf(sector) !== -1;
+                var matchMarketCap = selectedMarketCaps.length === 0 || selectedMarketCaps.indexOf(marketCap) !== -1;
                 if (matchSearch && matchSector && matchMarketCap) {
                     row.show();
                     visible++;
