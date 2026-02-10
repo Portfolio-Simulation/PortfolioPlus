@@ -39,7 +39,7 @@
                         <th>Prev Close</th>
                         <th>Price</th>
                         <th>Change</th>
-                        <th>Volume</th>
+                        <th>Sector</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -57,7 +57,9 @@
                                 {% if stock.gain_loss >= 0 %}+{% endif %}{{ stock.gain_loss }} ({{ stock.percent_change }}%)
                             </span>
                         </td>
-                        <td style="color: var(--text-muted);">{{ '{:,.0f}'.format(stock.volume) }}</td>
+                        <td>
+                            <span class="badge bg-accent-subtle text-accent" style="border: 1px solid rgba(139,92,246,0.2); font-weight: 500; font-size: 0.75rem;">{{ stock.sector or 'N/A' }}</span>
+                        </td>
                         <td>
                             <div class="d-flex align-items-center gap-2">
                                 <button class="btn btn-success-dark btn-sm buy-btn">Buy</button>
