@@ -102,6 +102,29 @@
     </div>
     {% endblock %}
 
+    <!-- Inactivity timeout modal (only when logged in) -->
+    {% if inactivity_timeout_minutes is defined and inactivity_timeout_minutes %}
+    <div class="modal fade" id="inactivityModal" tabindex="-1" aria-labelledby="inactivityModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="background: var(--bg-surface); border: 1px solid var(--border);">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title text-warning" id="inactivityModalLabel">
+                        <i class="fas fa-clock me-2"></i>Session expiring
+                    </h5>
+                </div>
+                <div class="modal-body text-secondary">
+                    <p class="mb-0">You have been inactive. You will be logged out in <strong id="inactivityCountdown">30</strong> seconds.</p>
+                    <p class="mb-0 mt-2 small">Choose to stay logged in or log out now.</p>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-outline-secondary" id="inactivityLogoutBtn">Log out</button>
+                    <button type="button" class="btn btn-accent" id="inactivityStayBtn">Stay logged in</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
@@ -167,6 +190,98 @@
             }, 4000);
         });
     </script>
+
+    {% if inactivity_timeout_minutes is defined and inactivity_timeout_minutes %}
+    <script>
+        (function() {
+            var inactivityMinutes = {{ inactivity_timeout_minutes }};
+            var inactivityMs = inactivityMinutes * 60 * 1000;
+            var warningSeconds = 30;
+            var lastActivity = Date.now();
+            var inactivityTimer = null;
+            var countdownTimer = null;
+            var soundInterval = null;
+            var modalEl = document.getElementById('inactivityModal');
+            var countdownEl = document.getElementById('inactivityCountdown');
+            var stayBtn = document.getElementById('inactivityStayBtn');
+            var logoutBtn = document.getElementById('inactivityLogoutBtn');
+
+            function playWarningSound() {
+                try {
+                    var ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    var osc = ctx.createOscillator();
+                    var gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.frequency.value = 800;
+                    osc.type = 'sine';
+                    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+                    osc.start(ctx.currentTime);
+                    osc.stop(ctx.currentTime + 0.2);
+                } catch (e) {}
+            }
+
+            function resetInactivity() {
+                lastActivity = Date.now();
+                if (inactivityTimer) clearTimeout(inactivityTimer);
+                inactivityTimer = setTimeout(showWarning, inactivityMs);
+            }
+
+            function showWarning() {
+                inactivityTimer = null;
+                if (!modalEl || !countdownEl) return;
+                var modal = new bootstrap.Modal(modalEl);
+                modal.show();
+                playWarningSound();
+                var remaining = warningSeconds;
+                countdownEl.textContent = remaining;
+                if (soundInterval) clearInterval(soundInterval);
+                soundInterval = setInterval(playWarningSound, 5000);
+                countdownTimer = setInterval(function() {
+                    remaining--;
+                    countdownEl.textContent = remaining;
+                    if (remaining <= 0) {
+                        clearInterval(countdownTimer);
+                        clearInterval(soundInterval);
+                        countdownTimer = null;
+                        soundInterval = null;
+                        window.location.href = '{{ url_for("logout") }}';
+                    }
+                }, 1000);
+            }
+
+            function stayLoggedIn() {
+                if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+                if (soundInterval) { clearInterval(soundInterval); soundInterval = null; }
+                var modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+                resetInactivity();
+            }
+
+            function setupActivityListeners() {
+                var events = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click'];
+                events.forEach(function(ev) {
+                    document.addEventListener(ev, function() {
+                        if (countdownTimer) return;
+                        resetInactivity();
+                    }, { passive: true });
+                });
+            }
+
+            if (stayBtn) stayBtn.addEventListener('click', stayLoggedIn);
+            if (logoutBtn) logoutBtn.addEventListener('click', function() { window.location.href = '{{ url_for("logout") }}'; });
+            modalEl.addEventListener('hidden.bs.modal', function() {
+                if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+                if (soundInterval) { clearInterval(soundInterval); soundInterval = null; }
+                resetInactivity();
+            });
+
+            setupActivityListeners();
+            inactivityTimer = setTimeout(showWarning, inactivityMs);
+        })();
+    </script>
+    {% endif %}
 
     {% block extra_scripts %}{% endblock %}
 </body>

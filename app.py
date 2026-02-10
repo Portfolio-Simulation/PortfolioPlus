@@ -70,6 +70,9 @@ def yahoo_chart(symbol, period='1y', interval='1d'):
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'your_secret_key')
 
+# Inactivity timeout (minutes) before showing stay-logged-in warning; configurable for testing
+INACTIVITY_TIMEOUT_MINUTES = int(os.getenv('INACTIVITY_TIMEOUT_MINUTES', '10'))
+
 # PostgreSQL connection setup
 db = None
 
@@ -399,6 +402,14 @@ def add_cache_control(response):
         response.headers['Pragma'] = 'no-cache'
         response.headers['Expires'] = '0'
     return response
+
+
+@app.context_processor
+def inject_inactivity_config():
+    """Expose inactivity timeout to templates when user is logged in (for client-side inactivity timer)."""
+    if 'user_id' in session:
+        return {'inactivity_timeout_minutes': INACTIVITY_TIMEOUT_MINUTES}
+    return {}
 
 @app.route('/stocks')
 def stocks():
