@@ -180,11 +180,19 @@
                 </div>
 
                 <!-- Best / Worst Performer -->
-                <div style="padding-top: 0.6rem; border-top: 1px solid var(--border);">
-                    <div class="stat-label" style="margin-bottom: 0.35rem;">
-                        <i class="fas fa-arrow-up text-success me-1"></i>Best / <i class="fas fa-arrow-down text-danger ms-1 me-1"></i>Worst
+                <div style="padding-top: 0.6rem; border-top: 1px solid var(--border);" class="d-flex justify-content-between">
+                    <div class="text-start">
+                        <div class="stat-label" style="margin-bottom: 0.35rem;">
+                            <i class="fas fa-arrow-up text-success me-1"></i>Best
+                        </div>
+                        <div id="bestWorstBest" style="font-size: 0.85rem; color: var(--text-muted);">Loading...</div>
                     </div>
-                    <div id="bestWorstContent" style="font-size: 0.85rem; color: var(--text-muted);">Loading...</div>
+                    <div class="text-end">
+                        <div class="stat-label" style="margin-bottom: 0.35rem;">
+                            <i class="fas fa-arrow-down text-danger me-1"></i>Worst
+                        </div>
+                        <div id="bestWorstWorst" style="font-size: 0.85rem; color: var(--text-muted);">Loading...</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -474,7 +482,8 @@
                         '<p class="mt-2 mb-1">No holdings yet</p>' +
                         '<a href="/stocks" style="font-size: 0.85rem;">Browse Stocks</a></td></tr>';
                     document.getElementById('holdingsCount').textContent = '';
-                    document.getElementById('bestWorstContent').innerHTML = '<span style="color: var(--text-muted);">No holdings</span>';
+                    document.getElementById('bestWorstBest').innerHTML = '<span style="color: var(--text-muted);">No holdings</span>';
+                    document.getElementById('bestWorstWorst').innerHTML = '<span style="color: var(--text-muted);">No holdings</span>';
                     return;
                 }
 
@@ -510,11 +519,10 @@
                 }
                 var bestCol = best.gain_loss_pct >= 0 ? 'var(--success)' : 'var(--danger)';
                 var worstCol = worst.gain_loss_pct >= 0 ? 'var(--success)' : 'var(--danger)';
-                document.getElementById('bestWorstContent').innerHTML =
-                    '<div class="d-flex justify-content-between">' +
-                    '<span><b style="color:' + bestCol + ';">' + best.symbol + '</b> <span style="color:' + bestCol + ';">' + (best.gain_loss_pct >= 0 ? '+' : '') + best.gain_loss_pct.toFixed(2) + '%</span></span>' +
-                    '<span><b style="color:' + worstCol + ';">' + worst.symbol + '</b> <span style="color:' + worstCol + ';">' + (worst.gain_loss_pct >= 0 ? '+' : '') + worst.gain_loss_pct.toFixed(2) + '%</span></span>' +
-                    '</div>';
+                document.getElementById('bestWorstBest').innerHTML =
+                    '<b style="color:' + bestCol + ';">' + best.symbol + '</b> <span style="color:' + bestCol + ';">' + (best.gain_loss_pct >= 0 ? '+' : '') + best.gain_loss_pct.toFixed(2) + '%</span>';
+                document.getElementById('bestWorstWorst').innerHTML =
+                    '<b style="color:' + worstCol + ';">' + worst.symbol + '</b> <span style="color:' + worstCol + ';">' + (worst.gain_loss_pct >= 0 ? '+' : '') + worst.gain_loss_pct.toFixed(2) + '%</span>';
             },
             error: function() {
                 document.getElementById('holdingsBody').innerHTML =
