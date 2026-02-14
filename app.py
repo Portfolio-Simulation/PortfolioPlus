@@ -387,6 +387,41 @@ def get_market_movers():
         print(f"Error in get_market_movers: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+
+@app.route('/api/market-news')
+def api_market_news():
+    """Return market news from Finnhub for the news ticker. Requires login."""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Not logged in'}), 401
+    try:
+        raw = finnhub_get('/news', {'category': 'general'})
+        if isinstance(raw, dict):
+            raw = raw.get('data', raw.get('items', []))
+        if not isinstance(raw, list):
+            return jsonify([])
+        items = []
+        for item in raw:
+            headline = item.get('headline') or item.get('title') or ''
+            url = item.get('url') or '#'
+            source = item.get('source') or ''
+            dt = item.get('datetime')
+            if isinstance(dt, (int, float)):
+                time_str = datetime.fromtimestamp(dt).strftime('%b %d, %H:%M') if dt else ''
+            else:
+                time_str = str(dt) if dt else ''
+            if headline:
+                items.append({
+                    'headline': headline,
+                    'url': url,
+                    'source': source,
+                    'time': time_str
+                })
+        return jsonify(items)
+    except Exception as e:
+        print(f"Error fetching market news: {e}")
+        return jsonify([])
+
+
 @app.route('/logout')
 def logout():
     session.clear()
