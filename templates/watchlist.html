@@ -45,11 +45,11 @@
                 </thead>
                 <tbody>
                     {% for stock in stocks %}
-                    <tr>
-                        <td>
+                    <tr class="trade-row-trigger" data-symbol="{{ stock.symbol }}" data-company="{{ stock.company_name|e }}">
+                        <td style="cursor: pointer;">
                             <span class="stock-symbol-link" data-symbol="{{ stock.symbol }}">{{ stock.symbol }}</span>
                         </td>
-                        <td style="color: var(--text-secondary);">{{ stock.company_name }}</td>
+                        <td style="color: var(--text-secondary); cursor: pointer;">{{ stock.company_name }}</td>
                         <td>${{ stock.prev_price }}</td>
                         <td style="font-weight: 600;">${{ stock.current_price }}</td>
                         <td>
@@ -62,8 +62,8 @@
                         </td>
                         <td>
                             <div class="d-flex align-items-center gap-2">
-                                <button class="btn btn-success-dark btn-sm buy-btn">Buy</button>
-                                <button class="btn btn-danger-dark btn-sm sell-btn">Sell</button>
+                                <button class="btn btn-success-dark btn-sm buy-btn" data-symbol="{{ stock.symbol }}" data-company="{{ stock.company_name|e }}">Buy</button>
+                                <button class="btn btn-danger-dark btn-sm sell-btn" data-symbol="{{ stock.symbol }}" data-company="{{ stock.company_name|e }}">Sell</button>
                                 <i class="fas fa-eye watchlist-icon active"
                                    data-symbol="{{ stock.symbol }}" title="Remove from watchlist"></i>
                             </div>
@@ -77,42 +77,56 @@
 </div>
 {% endif %}
 
-<!-- Buy/Sell Modal -->
+<!-- Buy/Sell Modal (2-col: form + candlestick) -->
 <div class="modal fade" id="buySellModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-exchange-alt text-accent me-2"></i>Trade Stock
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content" style="background: var(--bg-surface); border: 1px solid var(--border);">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title"><i class="fas fa-exchange-alt text-accent me-2"></i>Trade Stock</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
-                <form id="buySellForm">
-                    <div class="mb-3">
-                        <label class="form-label">Stock Symbol</label>
-                        <input type="text" id="stockSymbol" class="form-control" readonly>
+            <div class="modal-body p-4">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <form id="buySellForm">
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <label class="form-label text-muted small text-uppercase">Stock</label>
+                                    <div id="tradeModalStockName" style="font-weight: 600; color: var(--text-primary); font-size: 1.05rem;">—</div>
+                                    <input type="hidden" id="stockSymbol">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label text-muted small text-uppercase">Transaction Type</label>
+                                    <select id="transactionType" class="form-select">
+                                        <option value="">Select...</option>
+                                        <option value="buy">Buy</option>
+                                        <option value="sell">Sell</option>
+                                    </select>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label text-muted small text-uppercase">Quantity</label>
+                                    <input type="number" step="1" id="stockQuantity" class="form-control" min="1" value="1">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label text-muted small text-uppercase">Amount ($)</label>
+                                    <input type="number" step="0.01" id="totalAmount" class="form-control">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label text-muted small text-uppercase">Currently held</label>
+                                    <div id="tradeModalHeld" style="font-weight: 600; color: var(--text-secondary);">—</div>
+                                </div>
+                            </div>
+                            <div class="alert alert-danger d-none mt-3" id="errorMessage" style="background: var(--danger-bg); border-color: rgba(239,68,68,0.2); color: var(--danger);"></div>
+                            <div class="alert alert-success d-none mt-3" id="successMessage" style="background: var(--success-bg); border-color: rgba(16,185,129,0.2); color: var(--success);"></div>
+                        </form>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Transaction Type</label>
-                        <select id="transactionType" class="form-select">
-                            <option value="buy">Buy</option>
-                            <option value="sell">Sell</option>
-                        </select>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted small text-uppercase d-block mb-2">Last 5 days</label>
+                        <div id="tradeModalCandleChart" style="height: 280px; width: 100%; min-width: 0; overflow: hidden;"></div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Quantity</label>
-                        <input type="number" step="0.01" id="stockQuantity" class="form-control" min="0.01" value="1">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Amount ($)</label>
-                        <input type="number" step="0.01" id="totalAmount" class="form-control">
-                    </div>
-                    <div class="alert alert-danger d-none" id="errorMessage" style="background: var(--danger-bg); border-color: rgba(239,68,68,0.2); color: var(--danger);"></div>
-                    <div class="alert alert-success d-none" id="successMessage" style="background: var(--success-bg); border-color: rgba(16,185,129,0.2); color: var(--success);"></div>
-                </form>
+                </div>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer border-secondary">
                 <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-accent" id="confirmTransaction">Confirm Trade</button>
             </div>
@@ -127,45 +141,76 @@
         const buySellModal = new bootstrap.Modal(document.getElementById('buySellModal'));
         let currentPrice = 0;
 
-        // Watchlist toggle
-        $('.watchlist-icon').click(function() {
+        // Watchlist toggle (don't trigger row open)
+        $(document).on('click', '.watchlist-icon', function(e) {
+            e.stopPropagation();
             const icon = $(this);
             const symbol = icon.data('symbol');
-
             $.ajax({
                 url: `/toggle_watchlist/${symbol}`,
                 method: 'POST',
                 success: function(response) {
                     if (!response.in_watchlist) {
-                        // Remove the row with animation
                         icon.closest('tr').fadeOut(300, function() {
                             $(this).remove();
-                            if ($('tbody tr').length === 0) {
-                                location.reload();
-                            }
+                            if ($('tbody tr').length === 0) location.reload();
                         });
                     }
                 },
-                error: function() {
-                    console.error('Error updating watchlist');
-                }
+                error: function() { console.error('Error updating watchlist'); }
             });
         });
 
-        // Buy/Sell
-        $('.buy-btn, .sell-btn').click(function() {
-            const row = $(this).closest('tr');
-            const symbol = row.find('.stock-symbol-link').text().trim();
-            currentPrice = parseFloat(row.find('td:eq(3)').text().replace('$', ''));
-            const transactionType = $(this).hasClass('buy-btn') ? 'buy' : 'sell';
-
+        function openTradeModal(symbol, type, name, held) {
+            name = name || symbol;
+            held = held != null ? parseFloat(held) : 0;
+            if (isNaN(held)) held = 0;
             $('#stockSymbol').val(symbol);
-            $('#transactionType').val(transactionType);
+            $('#transactionType').val(type || '');
             $('#stockQuantity').val(1);
-            $('#totalAmount').val(currentPrice.toFixed(2));
+            $('#tradeModalStockName').text(name + ' (' + symbol + ')');
+            $('#tradeModalHeld').text(held > 0 ? held + ' share' + (held !== 1 ? 's' : '') : 'None');
             $('#errorMessage').addClass('d-none');
             $('#successMessage').addClass('d-none');
+            $('#buySellModal .modal-footer').show();
+            $('#txOverlay').remove();
+            const chartEl = document.getElementById('tradeModalCandleChart');
+            if (chartEl) chartEl.innerHTML = '<div class="text-center py-4 text-muted"><div class="spinner-accent mx-auto" style="width: 1.5rem; height: 1.5rem; border-width: 2px;"></div></div>';
+            $.get('/get_stock_price/' + symbol).then(function(r) {
+                currentPrice = parseFloat(r.price);
+                $('#totalAmount').val(currentPrice.toFixed(2));
+            }).fail(function() { $('#errorMessage').text('Error fetching stock price').removeClass('d-none'); });
+            $.get('/get_stock_ohlc/' + symbol).then(function(ohlc) {
+                if (!chartEl || ohlc.error || !ohlc.dates || !ohlc.open) {
+                    if (chartEl) chartEl.innerHTML = '<div class="text-center py-4 text-muted small">Chart unavailable</div>';
+                    return;
+                }
+                chartEl.innerHTML = '';
+                var n = ohlc.dates.length;
+                var datesMmDd = ohlc.dates.map(function(d) { return (d && d.length >= 10) ? d.slice(5, 10) : d; });
+                var yMin = Math.min.apply(null, ohlc.low);
+                var yMax = Math.max.apply(null, ohlc.high);
+                var yPad = Math.max((yMax - yMin) * 0.05, 0.01);
+                var layout = { height: 280, autosize: true, margin: { t: 8, r: 8, b: 28, l: 52 }, xaxis: { type: 'category', categoryorder: 'array', categoryarray: datesMmDd, range: [-0.5, Math.max(n - 0.5, 0)], tickfont: { color: '#9CA3AF', size: 10 }, gridcolor: 'rgba(255,255,255,0.06)', fixedrange: true, rangeslider: { visible: false } }, yaxis: { range: [yMin - yPad, yMax + yPad], tickfont: { color: '#9CA3AF', size: 10 }, gridcolor: 'rgba(255,255,255,0.06)', tickformat: '$.2f', fixedrange: true }, plot_bgcolor: 'rgba(0,0,0,0)', paper_bgcolor: 'rgba(0,0,0,0)', hoverlabel: { bgcolor: '#1F2937', bordercolor: 'rgba(255,255,255,0.1)', font: { color: '#F9FAFB' } } };
+                Plotly.newPlot(chartEl, [{ x: datesMmDd, open: ohlc.open, high: ohlc.high, low: ohlc.low, close: ohlc.close, type: 'candlestick', increasing: { line: { color: '#10B981' }, fillcolor: 'rgba(16,185,129,0.5)' }, decreasing: { line: { color: '#EF4444' }, fillcolor: 'rgba(239,68,68,0.5)' } }], layout, { displayModeBar: false, responsive: true });
+                setTimeout(function() { try { if (chartEl && typeof Plotly !== 'undefined') Plotly.Plots.resize(chartEl); } catch (err) {} }, 150);
+            }).fail(function() { if (chartEl) chartEl.innerHTML = '<div class="text-center py-4 text-muted small">Chart unavailable</div>'; });
             buySellModal.show();
+        }
+
+        document.getElementById('buySellModal').addEventListener('hidden.bs.modal', function() {
+            const chartEl = document.getElementById('tradeModalCandleChart');
+            if (chartEl && chartEl.innerHTML && typeof Plotly !== 'undefined') Plotly.purge(chartEl);
+        });
+
+        $(document).on('click', '.trade-row-trigger td', function(e) {
+            if ($(e.target).closest('.buy-btn, .sell-btn, .watchlist-icon').length) return;
+            const row = $(this).closest('tr');
+            openTradeModal(row.data('symbol'), null, row.data('company'), 0);
+        });
+        $(document).on('click', '.buy-btn, .sell-btn', function(e) {
+            e.stopPropagation();
+            openTradeModal($(this).data('symbol'), $(this).hasClass('buy-btn') ? 'buy' : 'sell', $(this).data('company'), 0);
         });
 
         $('#stockQuantity').on('input', function() {
@@ -187,7 +232,11 @@
             const transactionType = $('#transactionType').val();
             const quantity = parseFloat($('#stockQuantity').val());
             const amount = parseFloat($('#totalAmount').val());
-
+            if (!transactionType || (transactionType !== 'buy' && transactionType !== 'sell')) {
+                $('#errorMessage').text('Please select Buy or Sell.').removeClass('d-none');
+                $('#successMessage').addClass('d-none');
+                return;
+            }
             if (isNaN(quantity) || isNaN(amount) || quantity <= 0 || amount <= 0) {
                 $('#errorMessage').text('Invalid quantity or amount.').removeClass('d-none');
                 $('#successMessage').addClass('d-none');

@@ -61,6 +61,15 @@ def yahoo_chart(symbol, period='1y', interval='1d'):
         volumes = [v if v is not None else 0 for v in quotes.get('volume', [])]
         dates = [datetime.fromtimestamp(t).strftime('%Y-%m-%d') for t in timestamps[:len(closes)]]
         chart_data = {'dates': dates, 'prices': closes, 'volumes': volumes[:len(closes)]}
+        # Include OHLC when available (for candlestick)
+        opens = quotes.get('open') or []
+        highs = quotes.get('high') or []
+        lows = quotes.get('low') or []
+        n = len(closes)
+        if opens and len(opens) >= n and highs and len(highs) >= n and lows and len(lows) >= n:
+            chart_data['open'] = [o if o is not None else c for o, c in zip(opens[:n], closes)]
+            chart_data['high'] = [h if h is not None else c for h, c in zip(highs[:n], closes)]
+            chart_data['low'] = [l if l is not None else c for l, c in zip(lows[:n], closes)]
         _cache[cache_key] = (now, chart_data)
         return chart_data
     except Exception as e:
@@ -489,6 +498,38 @@ def get_stock_history(symbol):
     except Exception as e:
         print(f"Error fetching data for {symbol}: {str(e)}")
         return jsonify({'error': 'Failed to fetch stock data'}), 500
+
+
+@app.route('/get_stock_ohlc/<symbol>')
+def get_stock_ohlc(symbol):
+    """Return last 7 trading days OHLC for candlestick chart."""
+    try:
+        # 5d range with 1d interval gives ~5 bars; use 1wk for more days
+        chart_data = yahoo_chart(symbol, period='5d', interval='1d')
+        if not chart_data:
+            return jsonify({'error': 'No data available'}), 404
+        dates = chart_data['dates']
+        closes = chart_data['prices']
+        opens = chart_data.get('open')
+        highs = chart_data.get('high')
+        lows = chart_data.get('low')
+        if not opens or not highs or not lows:
+            # Build OHLC from close only (flat bars) if Yahoo didn't return OHLC
+            opens = closes
+            highs = closes
+            lows = closes
+        n = min(len(dates), len(closes), len(opens), len(highs), len(lows))
+        return jsonify({
+            'dates': dates[:n],
+            'open': opens[:n],
+            'high': highs[:n],
+            'low': lows[:n],
+            'close': closes[:n],
+            'symbol': symbol
+        })
+    except Exception as e:
+        print(f"Error fetching OHLC for {symbol}: {e}")
+        return jsonify({'error': 'Failed to fetch OHLC data'}), 500
 
 # @app.route('/portfolio')
 # def portfolio():
