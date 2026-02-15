@@ -262,16 +262,17 @@
                     <div class="card-body p-0">
                         <div class="table-responsive" style="max-height: 260px; overflow-y: auto;">
                             <table class="table table-hover holdings-table mb-0">
-                                <thead>
-                                    <tr>
-                                        <th>Stock</th>
-                                        <th>Shares</th>
-                                        <th>Gain/Loss</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="holdingsBody">
-                                    <tr>
-                                        <td colspan="3" class="text-center py-3">
+                        <thead>
+                            <tr>
+                                <th>Stock</th>
+                                <th>Shares</th>
+                                <th>Gain/Loss</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="holdingsBody">
+                            <tr>
+                                <td colspan="4" class="text-center py-3">
                                             <div class="spinner-accent mx-auto mb-2" style="width: 1.5rem; height: 1.5rem; border-width: 2px;"></div>
                                         </td>
                                     </tr>
@@ -319,42 +320,56 @@
     </div>
 </div>
 
-<!-- Buy/Sell Modal -->
+<!-- Buy/Sell Modal (redesigned: 2 columns, stock info + candlestick) -->
 <div class="modal fade" id="buySellModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-exchange-alt text-accent me-2"></i>Trade Stock
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content" style="background: var(--bg-surface); border: 1px solid var(--border);">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title"><i class="fas fa-exchange-alt text-accent me-2"></i>Trade Stock</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
-                <form id="buySellForm">
-                    <div class="mb-3">
-                        <label class="form-label">Stock Symbol</label>
-                        <input type="text" id="stockSymbol" class="form-control" readonly>
+            <div class="modal-body p-4">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <form id="buySellForm">
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <label class="form-label text-muted small text-uppercase">Stock</label>
+                                    <div id="tradeModalStockName" class="trade-modal-stock-name" style="font-weight: 600; color: var(--text-primary); font-size: 1.05rem;">—</div>
+                                    <input type="hidden" id="stockSymbol">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label text-muted small text-uppercase">Transaction Type</label>
+                                    <select id="transactionType" class="form-select">
+                                        <option value="">Select...</option>
+                                        <option value="buy">Buy</option>
+                                        <option value="sell">Sell</option>
+                                    </select>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label text-muted small text-uppercase">Quantity</label>
+                                    <input type="number" step="1" id="stockQuantity" class="form-control" min="1" value="1">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label text-muted small text-uppercase">Amount ($)</label>
+                                    <input type="number" step="0.01" id="totalAmount" class="form-control">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label text-muted small text-uppercase">Currently held</label>
+                                    <div id="tradeModalHeld" class="trade-modal-held" style="font-weight: 600; color: var(--text-secondary);">—</div>
+                                </div>
+                            </div>
+                            <div class="alert alert-danger d-none mt-3" id="errorMessage" style="background: var(--danger-bg); border-color: rgba(239,68,68,0.2); color: var(--danger);"></div>
+                            <div class="alert alert-success d-none mt-3" id="successMessage" style="background: var(--success-bg); border-color: rgba(16,185,129,0.2); color: var(--success);"></div>
+                        </form>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Transaction Type</label>
-                        <select id="transactionType" class="form-select">
-                            <option value="buy">Buy</option>
-                            <option value="sell">Sell</option>
-                        </select>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted small text-uppercase d-block mb-2">Last 5 days</label>
+                        <div id="tradeModalCandleChart" style="height: 280px; width: 100%; min-width: 0; overflow: hidden;"></div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Quantity</label>
-                        <input type="number" step="0.01" id="stockQuantity" class="form-control" min="0.01" value="1">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Amount ($)</label>
-                        <input type="number" step="0.01" id="totalAmount" class="form-control">
-                    </div>
-                    <div class="alert alert-danger d-none" id="errorMessage" style="background: var(--danger-bg); border-color: rgba(239,68,68,0.2); color: var(--danger);"></div>
-                    <div class="alert alert-success d-none" id="successMessage" style="background: var(--success-bg); border-color: rgba(16,185,129,0.2); color: var(--success);"></div>
-                </form>
+                </div>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer border-secondary">
                 <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-accent" id="confirmTransaction">Confirm Trade</button>
             </div>
@@ -546,13 +561,13 @@
             success: function(data) {
                 if (data.error) {
                     document.getElementById('holdingsBody').innerHTML =
-                        '<tr><td colspan="3" class="text-center py-3" style="color: var(--text-muted);">Error loading holdings</td></tr>';
+                        '<tr><td colspan="4" class="text-center py-3" style="color: var(--text-muted);">Error loading holdings</td></tr>';
                     return;
                 }
 
                 if (data.empty || !data.holdings || data.holdings.length === 0) {
                     document.getElementById('holdingsBody').innerHTML =
-                        '<tr><td colspan="3" class="text-center py-4" style="color: var(--text-muted);">' +
+                        '<tr><td colspan="4" class="text-center py-4" style="color: var(--text-muted);">' +
                         '<i class="fas fa-folder-open" style="font-size: 1.5rem; opacity: 0.4;"></i>' +
                         '<p class="mt-2 mb-1">No holdings yet</p>' +
                         '<a href="/stocks" style="font-size: 0.85rem;">Browse Stocks</a></td></tr>';
@@ -571,14 +586,38 @@
                     var isPos = h.gain_loss >= 0;
                     rows +=
                         '<tr>' +
-                        '<td><div style="font-weight:600;color:var(--accent);">' + h.symbol + '</div>' +
+                        '<td class="trade-modal-trigger" style="cursor:pointer;" data-symbol="' + (h.symbol || '').replace(/"/g, '&quot;') + '" data-name="' + (h.name || '').replace(/"/g, '&quot;') + '" data-held="' + h.quantity + '">' +
+                        '<div style="font-weight:600;color:var(--accent);">' + h.symbol + '</div>' +
                         '<div style="font-size:0.75rem;color:var(--text-muted);">' + h.name + '</div></td>' +
                         '<td style="font-weight:600;">' + h.quantity + '</td>' +
                         '<td><span class="perf-badge ' + (isPos ? 'positive' : 'negative') + '">' +
                             (isPos ? '+' : '') + '$' + h.gain_loss.toFixed(2) + ' (' + (isPos ? '+' : '') + h.gain_loss_pct.toFixed(2) + '%)</span></td>' +
+                        '<td><div class="d-flex gap-1 holdings-actions"><button type="button" class="btn btn-success-dark btn-sm py-0 px-1 hold-buy-btn" data-symbol="' + (h.symbol || '').replace(/"/g, '&quot;') + '">Buy</button>' +
+                        '<button type="button" class="btn btn-danger-dark btn-sm py-0 px-1 hold-sell-btn" data-symbol="' + (h.symbol || '').replace(/"/g, '&quot;') + '">Sell</button></div></td>' +
                         '</tr>';
                 }
                 document.getElementById('holdingsBody').innerHTML = rows;
+                document.querySelectorAll('#holdingsBody .trade-modal-trigger').forEach(function(el) {
+                    el.addEventListener('click', function() {
+                        openTrade(this.getAttribute('data-symbol'), null, this.getAttribute('data-name'), parseFloat(this.getAttribute('data-held')) || 0);
+                    });
+                });
+                document.querySelectorAll('#holdingsBody .hold-buy-btn').forEach(function(btn) {
+                    btn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        var tr = this.closest('tr');
+                        var firstTd = tr.querySelector('td.trade-modal-trigger');
+                        if (firstTd) openTrade(firstTd.getAttribute('data-symbol'), 'buy', firstTd.getAttribute('data-name'), parseFloat(firstTd.getAttribute('data-held')) || 0);
+                    });
+                });
+                document.querySelectorAll('#holdingsBody .hold-sell-btn').forEach(function(btn) {
+                    btn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        var tr = this.closest('tr');
+                        var firstTd = tr.querySelector('td.trade-modal-trigger');
+                        if (firstTd) openTrade(firstTd.getAttribute('data-symbol'), 'sell', firstTd.getAttribute('data-name'), parseFloat(firstTd.getAttribute('data-held')) || 0);
+                    });
+                });
 
                 // Best / Worst performer
                 var best = holdings[0], worst = holdings[0];
@@ -595,22 +634,31 @@
             },
             error: function() {
                 document.getElementById('holdingsBody').innerHTML =
-                    '<tr><td colspan="3" class="text-center py-3" style="color: var(--text-muted);">Error loading holdings</td></tr>';
+                    '<tr><td colspan="4" class="text-center py-3" style="color: var(--text-muted);">Error loading holdings</td></tr>';
             }
         });
     }
 
     // ============================
-    //  TRADE MODAL
+    //  TRADE MODAL (open from holdings name click or Buy/Sell)
     // ============================
-    function openTrade(symbol, type) {
+    function openTrade(symbol, type, name, sharesHeld) {
+        name = name || symbol;
+        sharesHeld = sharesHeld != null ? sharesHeld : 0;
         $('#stockSymbol').val(symbol);
-        $('#transactionType').val(type);
+        $('#transactionType').val(type || '');
         $('#stockQuantity').val(1);
+        $('#tradeModalStockName').text(name + ' (' + symbol + ')');
+        $('#tradeModalHeld').text(sharesHeld > 0 ? sharesHeld + ' share' + (sharesHeld !== 1 ? 's' : '') : 'None');
         $('#errorMessage').addClass('d-none');
         $('#successMessage').addClass('d-none');
         $('#buySellModal .modal-footer').show();
         $('#txOverlay').remove();
+
+        var chartEl = document.getElementById('tradeModalCandleChart');
+        if (chartEl) {
+            chartEl.innerHTML = '<div class="text-center py-4 text-muted"><div class="spinner-accent mx-auto" style="width: 1.5rem; height: 1.5rem; border-width: 2px;"></div></div>';
+        }
 
         $.ajax({
             url: '/get_stock_price/' + symbol,
@@ -624,8 +672,73 @@
             }
         });
 
+        $.ajax({
+            url: '/get_stock_ohlc/' + symbol,
+            dataType: 'json',
+            success: function(ohlc) {
+                if (!chartEl) return;
+                if (ohlc.error || !ohlc.dates || !ohlc.open) {
+                    chartEl.innerHTML = '<div class="text-center py-4 text-muted small">Chart unavailable</div>';
+                    return;
+                }
+                chartEl.innerHTML = '';
+                var n = ohlc.dates.length;
+                var datesMmDd = ohlc.dates.map(function(d) { return (d && d.length >= 10) ? d.slice(5, 10) : d; });
+                var yMin = Math.min.apply(null, ohlc.low);
+                var yMax = Math.max.apply(null, ohlc.high);
+                var yPad = Math.max((yMax - yMin) * 0.05, 0.01);
+                var trace = {
+                    x: datesMmDd,
+                    open: ohlc.open,
+                    high: ohlc.high,
+                    low: ohlc.low,
+                    close: ohlc.close,
+                    type: 'candlestick',
+                    increasing: { line: { color: '#10B981' }, fillcolor: 'rgba(16, 185, 129, 0.5)' },
+                    decreasing: { line: { color: '#EF4444' }, fillcolor: 'rgba(239, 68, 68, 0.5)' }
+                };
+                var layout = {
+                    height: 280,
+                    autosize: true,
+                    margin: { t: 8, r: 8, b: 28, l: 52 },
+                    xaxis: {
+                        type: 'category',
+                        categoryorder: 'array',
+                        categoryarray: datesMmDd,
+                        range: [-0.5, Math.max(n - 0.5, 0)],
+                        tickfont: { color: '#9CA3AF', size: 10 },
+                        gridcolor: 'rgba(255,255,255,0.06)',
+                        fixedrange: true,
+                        rangeslider: { visible: false }
+                    },
+                    yaxis: {
+                        range: [yMin - yPad, yMax + yPad],
+                        tickfont: { color: '#9CA3AF', size: 10 },
+                        gridcolor: 'rgba(255,255,255,0.06)',
+                        tickformat: '$.2f',
+                        fixedrange: true
+                    },
+                    plot_bgcolor: 'rgba(0,0,0,0)',
+                    paper_bgcolor: 'rgba(0,0,0,0)',
+                    hoverlabel: { bgcolor: '#1F2937', bordercolor: 'rgba(255,255,255,0.1)', font: { color: '#F9FAFB' } }
+                };
+                Plotly.newPlot(chartEl, [trace], layout, { displayModeBar: false, responsive: true });
+                setTimeout(function() {
+                    try { if (chartEl && typeof Plotly !== 'undefined') Plotly.Plots.resize(chartEl); } catch (err) {}
+                }, 150);
+            },
+            error: function() {
+                if (chartEl) chartEl.innerHTML = '<div class="text-center py-4 text-muted small">Chart unavailable</div>';
+            }
+        });
+
         buySellModal.show();
     }
+
+    document.getElementById('buySellModal').addEventListener('hidden.bs.modal', function() {
+        var chartEl = document.getElementById('tradeModalCandleChart');
+        if (chartEl && chartEl.innerHTML && typeof Plotly !== 'undefined') Plotly.purge(chartEl);
+    });
 
     $('#stockQuantity').on('input', function() {
         var qty = parseFloat($(this).val());
@@ -642,6 +755,11 @@
         var quantity = parseFloat($('#stockQuantity').val());
         var amount = parseFloat($('#totalAmount').val());
 
+        if (!transactionType || (transactionType !== 'buy' && transactionType !== 'sell')) {
+            $('#errorMessage').text('Please select Buy or Sell.').removeClass('d-none');
+            $('#successMessage').addClass('d-none');
+            return;
+        }
         if (isNaN(quantity) || isNaN(amount) || quantity <= 0 || amount <= 0) {
             $('#errorMessage').text('Invalid quantity or amount.').removeClass('d-none');
             $('#successMessage').addClass('d-none');
