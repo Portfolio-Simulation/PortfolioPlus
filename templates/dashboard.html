@@ -214,25 +214,6 @@
                 </a>
             </div>
         </div>
-
-        <!-- Sector Allocation -->
-        <div class="card">
-            <div class="card-header">
-                <i class="fas fa-chart-pie text-accent me-2"></i>Sector Allocation
-            </div>
-            <div class="card-body">
-                <div id="sectorChart"></div>
-                <div id="sectorEmpty" class="d-none">
-                    <div class="text-center py-3">
-                        <i class="fas fa-folder-open" style="font-size: 1.5rem; color: var(--text-muted); opacity: 0.5;"></i>
-                        <p class="mb-0 mt-2" style="font-size: 0.85rem; color: var(--text-muted);">
-                            No holdings yet.<br>
-                            <a href="/stocks" style="font-size: 0.8rem;">Browse Stocks</a>
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 
     <!-- Main Content -->
@@ -270,34 +251,53 @@
             </div>
         </div>
 
-        <!-- Holdings Table with Trade Buttons -->
-        <div id="holdingsSection" class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <span><i class="fas fa-layer-group text-accent me-2"></i>Your Holdings</span>
-                <span id="holdingsCount" class="text-secondary" style="font-size: 0.8rem;"></span>
+        <!-- Holdings + Market Movers side by side -->
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div id="holdingsSection" class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-layer-group text-accent me-2"></i>Your Holdings</span>
+                        <span id="holdingsCount" class="text-secondary" style="font-size: 0.8rem;"></span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive" style="max-height: 260px; overflow-y: auto;">
+                            <table class="table table-hover holdings-table mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Stock</th>
+                                        <th>Shares</th>
+                                        <th>Gain/Loss</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="holdingsBody">
+                                    <tr>
+                                        <td colspan="3" class="text-center py-3">
+                                            <div class="spinner-accent mx-auto mb-2" style="width: 1.5rem; height: 1.5rem; border-width: 2px;"></div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="card-body p-0">
-                <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
-                    <table class="table table-hover holdings-table mb-0">
-                        <thead>
-                            <tr>
-                                <th>Stock</th>
-                                <th>Shares</th>
-                                <th>Avg Cost</th>
-                                <th>Current Price</th>
-                                <th>Value</th>
-                                <th>Gain/Loss</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="holdingsBody">
-                            <tr>
-                                <td colspan="7" class="text-center py-3">
-                                    <div class="spinner-accent mx-auto mb-2" style="width: 1.5rem; height: 1.5rem; border-width: 2px;"></div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+            <div class="col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <i class="fas fa-chart-pie text-accent me-2"></i>Sector Allocation
+                    </div>
+                    <div class="card-body">
+                        <div id="sectorChart"></div>
+                        <div id="sectorEmpty" class="d-none">
+                            <div class="text-center py-4">
+                                <i class="fas fa-folder-open" style="font-size: 1.5rem; color: var(--text-muted); opacity: 0.5;"></i>
+                                <p class="mb-0 mt-2" style="font-size: 0.85rem; color: var(--text-muted);">
+                                    No holdings yet.<br>
+                                    <a href="/stocks" style="font-size: 0.8rem;">Browse Stocks</a>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -471,13 +471,13 @@
             success: function(data) {
                 if (data.error) {
                     document.getElementById('holdingsBody').innerHTML =
-                        '<tr><td colspan="7" class="text-center py-3" style="color: var(--text-muted);">Error loading holdings</td></tr>';
+                        '<tr><td colspan="3" class="text-center py-3" style="color: var(--text-muted);">Error loading holdings</td></tr>';
                     return;
                 }
 
                 if (data.empty || !data.holdings || data.holdings.length === 0) {
                     document.getElementById('holdingsBody').innerHTML =
-                        '<tr><td colspan="7" class="text-center py-4" style="color: var(--text-muted);">' +
+                        '<tr><td colspan="3" class="text-center py-4" style="color: var(--text-muted);">' +
                         '<i class="fas fa-folder-open" style="font-size: 1.5rem; opacity: 0.4;"></i>' +
                         '<p class="mt-2 mb-1">No holdings yet</p>' +
                         '<a href="/stocks" style="font-size: 0.85rem;">Browse Stocks</a></td></tr>';
@@ -499,15 +499,9 @@
                         '<td><div style="font-weight:600;color:var(--accent);">' + h.symbol + '</div>' +
                         '<div style="font-size:0.75rem;color:var(--text-muted);">' + h.name + '</div></td>' +
                         '<td style="font-weight:600;">' + h.quantity + '</td>' +
-                        '<td>$' + h.avg_cost.toFixed(2) + '</td>' +
-                        '<td>$' + h.current_price.toFixed(2) + '</td>' +
-                        '<td style="font-weight:600;">$' + h.current_value.toFixed(2) + '</td>' +
                         '<td><span class="perf-badge ' + (isPos ? 'positive' : 'negative') + '">' +
                             (isPos ? '+' : '') + '$' + h.gain_loss.toFixed(2) + ' (' + (isPos ? '+' : '') + h.gain_loss_pct.toFixed(2) + '%)</span></td>' +
-                        '<td><div class="d-flex gap-2">' +
-                        '<button class="btn btn-success-dark btn-sm" onclick="openTrade(\'' + h.symbol + '\',\'buy\')">Buy</button>' +
-                        '<button class="btn btn-danger-dark btn-sm" onclick="openTrade(\'' + h.symbol + '\',\'sell\')">Sell</button>' +
-                        '</div></td></tr>';
+                        '</tr>';
                 }
                 document.getElementById('holdingsBody').innerHTML = rows;
 
@@ -526,7 +520,7 @@
             },
             error: function() {
                 document.getElementById('holdingsBody').innerHTML =
-                    '<tr><td colspan="7" class="text-center py-3" style="color: var(--text-muted);">Error loading holdings</td></tr>';
+                    '<tr><td colspan="3" class="text-center py-3" style="color: var(--text-muted);">Error loading holdings</td></tr>';
             }
         });
     }
