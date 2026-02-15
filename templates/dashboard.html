@@ -304,6 +304,21 @@
     </div>
 </div>
 
+<!-- Index Chart Modal -->
+<div class="modal fade" id="indexChartModal" tabindex="-1" aria-labelledby="indexChartModalTitle">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content" style="background: var(--bg-surface); border: 1px solid var(--border);">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title" id="indexChartModalTitle">Index Chart</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-3">
+                <div id="indexChartModalChart" style="height: 400px; width: 100%;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Buy/Sell Modal -->
 <div class="modal fade" id="buySellModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
@@ -449,7 +464,11 @@
             var changeColor = isPositive ? 'var(--success)' : 'var(--danger)';
             var sparkColor = isPositive ? '#10B981' : '#EF4444';
 
-            // Build the card content (keep the name, replace everything after it)
+            // Build the card content; whole card opens chart on click
+            card.setAttribute('data-index-symbol', sym);
+            card.setAttribute('data-index-name', (d.name || sym).replace(/"/g, '&quot;'));
+            card.style.cursor = 'pointer';
+            card.title = 'Click to view chart';
             var html = '<div class="index-name">' + d.name + '</div>' +
                 '<div class="index-price">$' + d.current_price.toFixed(2) + '</div>' +
                 '<div class="index-change" style="color: ' + changeColor + ';">' +
@@ -459,6 +478,62 @@
 
             card.innerHTML = html;
         }
+        document.querySelectorAll('.index-card[data-index-symbol]').forEach(function(card) {
+            card.addEventListener('click', function() {
+                openIndexChartModal(this.getAttribute('data-index-symbol'), this.getAttribute('data-index-name'));
+            });
+        });
+    }
+
+    function openIndexChartModal(symbol, name) {
+        var modal = document.getElementById('indexChartModal');
+        var titleEl = document.getElementById('indexChartModalTitle');
+        var chartEl = document.getElementById('indexChartModalChart');
+        if (!modal || !titleEl || !chartEl) return;
+        titleEl.textContent = (name || symbol) + ' (' + symbol + ')';
+        chartEl.innerHTML = '<div class="text-center py-5 text-muted"><div class="spinner-accent mx-auto mb-2" style="width: 2rem; height: 2rem; border-width: 2px;"></div><div>Loading chart...</div></div>';
+        var modalBs = new bootstrap.Modal(modal);
+        modalBs.show();
+
+        $.ajax({
+            url: '/get_stock_history/' + symbol,
+            dataType: 'json',
+            success: function(data) {
+                if (data.error || !data.dates || !data.prices) {
+                    chartEl.innerHTML = '<div class="text-center py-5 text-muted">Unable to load chart data.</div>';
+                    return;
+                }
+                chartEl.innerHTML = '';
+                var isPositive = data.prices.length >= 2 && data.prices[data.prices.length - 1] >= data.prices[0];
+                var lineColor = isPositive ? '#10B981' : '#EF4444';
+                Plotly.newPlot(chartEl, [{
+                    x: data.dates,
+                    y: data.prices,
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: { color: lineColor, width: 2 },
+                    fill: 'tozeroy',
+                    fillcolor: isPositive ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)'
+                }], {
+                    margin: { t: 20, r: 20, b: 40, l: 50 },
+                    xaxis: { tickfont: { color: '#9CA3AF', size: 10 }, gridcolor: 'rgba(255,255,255,0.06)' },
+                    yaxis: { tickfont: { color: '#9CA3AF', size: 10 }, gridcolor: 'rgba(255,255,255,0.06)', tickformat: '$.2f' },
+                    plot_bgcolor: 'rgba(0,0,0,0)',
+                    paper_bgcolor: 'rgba(0,0,0,0)',
+                    hoverlabel: { bgcolor: '#1F2937', bordercolor: 'rgba(255,255,255,0.1)', font: { color: '#F9FAFB' } }
+                }, { displayModeBar: true, responsive: true });
+            },
+            error: function() {
+                chartEl.innerHTML = '<div class="text-center py-5 text-muted">Failed to load chart.</div>';
+            }
+        });
+
+        modal.addEventListener('hidden.bs.modal', function onHidden() {
+            if (typeof Plotly !== 'undefined' && chartEl && chartEl.innerHTML !== '') {
+                Plotly.purge(chartEl);
+            }
+            modal.removeEventListener('hidden.bs.modal', onHidden);
+        }, { once: true });
     }
 
     // ============================
